@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -27,7 +26,6 @@ func ShortUrlHandler(w http.ResponseWriter, r *http.Request) {
 		storage[shortUrl] = link
 		w.WriteHeader(201)
 		w.Write([]byte("http://localhost:8080/" + shortUrl))
-		fmt.Println(storage[shortUrl])
 	case http.MethodGet:
 		path := r.URL.Path[1:]
 		link := storage[path]
@@ -40,7 +38,6 @@ func ShortUrlHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write(resp)
 		w.WriteHeader(307)
-		fmt.Println(path, link)
 	default:
 		w.WriteHeader(400)
 	}
