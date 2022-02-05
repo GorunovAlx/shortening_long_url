@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-
-	"github.com/GorunovAlx/shortening_long_url/internal/app"
 )
 
 type OriginalUrl struct {
@@ -24,7 +22,7 @@ func ShortUrlHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		link := string(b)
-		shortUrl := app.GenerateShortLink(link)
+		shortUrl := "abcd12"
 		storage[shortUrl] = link
 		w.WriteHeader(201)
 		w.Write([]byte("http://localhost:8080/" + shortUrl))
