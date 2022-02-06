@@ -7,15 +7,11 @@ import (
 	"strconv"
 )
 
-type OriginalUrl struct {
-	Location string `json:"Location"`
-}
-
 var storage map[string]string
 
-var urlId int
+var urlID int
 
-func ShortUrlHandler(w http.ResponseWriter, r *http.Request) {
+func ShortURLHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		b, err := io.ReadAll(r.Body)
@@ -24,11 +20,11 @@ func ShortUrlHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		link := string(b)
-		shortUrl := strconv.Itoa(urlId)
-		urlId++
-		storage[shortUrl] = link
+		shortURL := strconv.Itoa(urlID)
+		urlID++
+		storage[shortURL] = link
 		w.WriteHeader(201)
-		w.Write([]byte("http://localhost:8080/" + string(shortUrl)))
+		w.Write([]byte("http://localhost:8080/" + string(shortURL)))
 	case http.MethodGet:
 		path := r.URL.Path[1:]
 		link := storage[path]
@@ -42,7 +38,7 @@ func ShortUrlHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	storage = make(map[string]string)
-	urlId = 1
-	http.HandleFunc("/", ShortUrlHandler)
+	urlID = 1
+	http.HandleFunc("/", ShortURLHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
