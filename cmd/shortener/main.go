@@ -1,9 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
 )
 
 type OriginalUrl struct {
@@ -12,41 +13,36 @@ type OriginalUrl struct {
 
 var storage map[string]string
 
+var urlId int
+
 func ShortUrlHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		b, err := io.ReadAll(r.Body)
-		// обрабатываем ошибку
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), 400)
 			return
 		}
 		link := string(b)
-		shortUrl := "abcd12"
+		shortUrl := strconv.Itoa(urlId)
+		urlId++
 		storage[shortUrl] = link
 		w.WriteHeader(201)
-		w.Write([]byte("http://localhost:8080/" + shortUrl))
+		w.Write([]byte("http://localhost:8080/" + string(shortUrl)))
 	case http.MethodGet:
 		path := r.URL.Path[1:]
 		link := storage[path]
-		w.Header().Set("content-type", "application/json")
-		originalUrl := OriginalUrl{link}
-		resp, err := json.Marshal(originalUrl)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		w.Write(resp)
+		w.Header().Add("Location", link)
 		w.WriteHeader(307)
 	default:
 		w.WriteHeader(400)
+		w.Write([]byte("Something wrong"))
 	}
 }
 
 func main() {
 	storage = make(map[string]string)
-	// маршрутизация запросов обработчику
+	urlId = 1
 	http.HandleFunc("/", ShortUrlHandler)
-	// запуск сервера с адресом localhost, порт 8080
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
