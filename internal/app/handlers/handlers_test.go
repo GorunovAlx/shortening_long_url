@@ -45,7 +45,7 @@ func TestShortenerURLHandler(t *testing.T) {
 		name    string
 		method  string
 		st      map[int]string
-		nextId  int
+		nextID  int
 		request string
 		body    []byte
 		want    want
@@ -55,7 +55,7 @@ func TestShortenerURLHandler(t *testing.T) {
 			request: "http://localhost:8080/",
 			method:  http.MethodPost,
 			st:      make(map[int]string),
-			nextId:  1,
+			nextID:  1,
 			body:    []byte("google.com"),
 			want: want{
 				statusCode: 201,
@@ -71,7 +71,7 @@ func TestShortenerURLHandler(t *testing.T) {
 				2: "google.com",
 				3: "tutu.ru",
 			},
-			nextId: 4,
+			nextID: 4,
 			body:   nil,
 			want: want{
 				statusCode: 307,
@@ -87,7 +87,7 @@ func TestShortenerURLHandler(t *testing.T) {
 				2: "google.com",
 				3: "tutu.ru",
 			},
-			nextId: 4,
+			nextID: 4,
 			body:   []byte("yandex.ru"),
 			want: want{
 				statusCode: 201,
@@ -103,7 +103,7 @@ func TestShortenerURLHandler(t *testing.T) {
 				2: "google.com",
 				3: "tutu.ru",
 			},
-			nextId: 4,
+			nextID: 4,
 			body:   nil,
 			want: want{
 				statusCode: 400,
@@ -119,7 +119,7 @@ func TestShortenerURLHandler(t *testing.T) {
 				2: "google.com",
 				3: "tutu.ru",
 			},
-			nextId: 4,
+			nextID: 4,
 			body:   nil,
 			want: want{
 				statusCode: 400,
@@ -135,7 +135,7 @@ func TestShortenerURLHandler(t *testing.T) {
 				2: "google.com",
 				3: "tutu.ru",
 			},
-			nextId: 4,
+			nextID: 4,
 			body:   nil,
 			want: want{
 				statusCode: 400,
@@ -146,7 +146,7 @@ func TestShortenerURLHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ms := mockStorage{
-				id:      tt.nextId,
+				id:      tt.nextID,
 				storage: tt.st,
 			}
 			request := httptest.NewRequest(tt.method, tt.request, bytes.NewReader(tt.body))
