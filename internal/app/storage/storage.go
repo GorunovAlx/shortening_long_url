@@ -28,6 +28,7 @@ func NewShortURLStorage() *ShortURLStorage {
 	}
 }
 
+// Get initial link by short link.
 func (repo *ShortURLStorage) GetInitialLink(shortLink int) (string, error) {
 	repo.s.RLock()
 	defer repo.s.RUnlock()
