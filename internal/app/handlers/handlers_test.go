@@ -50,8 +50,6 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.R
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 
-	defer resp.Body.Close()
-
 	return resp
 }
 
