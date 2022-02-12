@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// mockStorage imitates ShortURLStorage.
 type mockStorage struct {
 	id      int
 	storage map[int]string
@@ -22,6 +23,7 @@ func (ms *mockStorage) idInkrement() {
 	ms.id += 1
 }
 
+// Imitating ShortURLRepo.GetInitialLink.
 func (ms *mockStorage) GetInitialLink(shortLink int) (string, error) {
 	link := ms.storage[shortLink]
 	if link == "" {
@@ -30,6 +32,7 @@ func (ms *mockStorage) GetInitialLink(shortLink int) (string, error) {
 	return link, nil
 }
 
+// Imitating ShortURLRepo.CreateShortURL.
 func (ms *mockStorage) CreateShortURL(initialLink string) (int, error) {
 	ms.storage[ms.id] = initialLink
 	defer ms.idInkrement()
@@ -37,6 +40,7 @@ func (ms *mockStorage) CreateShortURL(initialLink string) (int, error) {
 	return ms.id, nil
 }
 
+// Test request execution.
 func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.Response {
 	req, err := http.NewRequest(method, ts.URL+path, nil)
 	require.NoError(t, err)
@@ -53,6 +57,8 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.R
 	return resp
 }
 
+// NewRouter returns a newly initialized chi.Router object that implements
+// the ShortURLRepo interface.
 func NewRouter(repo *mockStorage) chi.Router {
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
@@ -62,6 +68,7 @@ func NewRouter(repo *mockStorage) chi.Router {
 	return r
 }
 
+// Test for GetInitialLinkHandler.
 func TestGetLinkHandler(t *testing.T) {
 	type want struct {
 		statusCode int
@@ -122,6 +129,7 @@ func TestGetLinkHandler(t *testing.T) {
 	}
 }
 
+// Test for CreateShortURLHandler.
 func TestCreateShortURLHandler(t *testing.T) {
 	target := "http://localhost:8080/"
 	type want struct {

@@ -10,6 +10,8 @@ import (
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 )
 
+// CreateShortURLHandler returns a http.HandlerFunc that processes the body of the request
+// which contains URL and returns a shortened link.
 func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		b, err := io.ReadAll(r.Body)
@@ -37,6 +39,8 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	}
 }
 
+// GetInitialLinkHandler returns a http.HandlerFunc that takes shortURL parameter
+// containing a short url and returns the initial link in the location header.
 func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "shortURL")
