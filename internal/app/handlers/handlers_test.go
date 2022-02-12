@@ -112,6 +112,8 @@ func TestGetLinkHandler(t *testing.T) {
 			defer ts.Close()
 			result := testRequest(t, ts, "GET", tt.path)
 
+			defer result.Body.Close()
+
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
 
 			location := result.Header.Get("Location")
