@@ -10,6 +10,26 @@ import (
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 )
 
+// Handler is a structure containing the type of chi.Mux
+// and ShortURLRepo interface from storage package.
+type Handler struct {
+	*chi.Mux
+	Repo storage.ShortURLRepo
+}
+
+// NewHandler returns a newly initialized Handler object that implements
+// the ShortURLRepo interface.
+func NewHandler(repo storage.ShortURLRepo) *Handler {
+	h := &Handler{
+		Mux:  chi.NewMux(),
+		Repo: repo,
+	}
+	h.Post("/", CreateShortURLHandler(repo))
+	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
+
+	return h
+}
+
 // CreateShortURLHandler returns a http.HandlerFunc that processes the body of the request
 // which contains URL and returns a shortened link.
 func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
@@ -20,7 +40,7 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 			w.Write([]byte("Incorrect request"))
 			return
 		}
-		if string(b) == "" {
+		if len(b) == 0 {
 			w.WriteHeader(400)
 			w.Write([]byte("Incorrect request"))
 			return

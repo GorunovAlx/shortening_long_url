@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,17 +56,6 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.R
 	return resp
 }
 
-// NewRouter returns a newly initialized chi.Router object that implements
-// the ShortURLRepo interface.
-func NewRouter(repo *mockStorage) chi.Router {
-	r := chi.NewRouter()
-	r.Route("/", func(r chi.Router) {
-		r.Get("/{shortURL}", GetInitialLinkHandler(repo))
-		r.Post("/", CreateShortURLHandler(repo))
-	})
-	return r
-}
-
 // Test for GetInitialLinkHandler.
 func TestGetLinkHandler(t *testing.T) {
 	type want struct {
@@ -114,7 +102,7 @@ func TestGetLinkHandler(t *testing.T) {
 					3: "tutu.ru",
 				},
 			}
-			r := NewRouter(&ms)
+			r := NewHandler(&ms)
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 			result := testRequest(t, ts, "GET", tt.path)
