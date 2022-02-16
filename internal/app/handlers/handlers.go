@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
-	"strconv"
 
+	valid "github.com/asaskevich/govalidator"
 	"github.com/go-chi/chi/v5"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
@@ -25,9 +26,44 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 		Repo: repo,
 	}
 	h.Post("/", CreateShortURLHandler(repo))
+	h.Post("/api/shorten", CreateShortURLJSONHandler(repo))
 	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
 
 	return h
+}
+
+func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var url storage.ShortURL
+		if err := json.NewDecoder(r.Body).Decode(&url); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		isUrl := valid.IsURL(url.InitialLink)
+		if !isUrl {
+			w.WriteHeader(400)
+			w.Write([]byte("Incorrect link"))
+			return
+		}
+		shortURL, err := urlStorage.CreateShortURL(url.InitialLink)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		res := storage.ShortURL{
+			ShortLink: shortURL,
+		}
+		resp, err := json.Marshal(res)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write(resp)
+	}
 }
 
 // CreateShortURLHandler returns a http.HandlerFunc that processes the body of the request
@@ -53,9 +89,8 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(201)
-		urlNumber := strconv.Itoa(shortURL)
-		w.Write([]byte("http://localhost:8080/" + urlNumber))
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("http://localhost:8080/" + shortURL))
 	}
 }
 
@@ -70,14 +105,7 @@ func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 			return
 		}
 
-		url, err := strconv.Atoi(shortURL)
-		if err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte(err.Error()))
-			return
-		}
-
-		link, err := urlStorage.GetInitialLink(url)
+		link, err := urlStorage.GetInitialLink(shortURL)
 		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(err.Error()))
