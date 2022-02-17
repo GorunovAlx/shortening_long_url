@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	valid "github.com/asaskevich/govalidator"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -46,13 +47,12 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		/*
-			isUrl := valid.IsURL(url.InitialLink)
-			if !isUrl {
-				w.WriteHeader(400)
-				w.Write([]byte("Incorrect link"))
-				return
-			} */
+		isUrl := valid.IsURL(url.InitialLink)
+		if !isUrl {
+			w.WriteHeader(400)
+			w.Write([]byte("Incorrect link"))
+			return
+		}
 		shortURL, err := urlStorage.CreateShortURL(url.InitialLink)
 		if err != nil {
 			w.WriteHeader(400)

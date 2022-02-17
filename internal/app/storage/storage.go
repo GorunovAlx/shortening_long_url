@@ -8,8 +8,8 @@ import (
 
 // ShortURL struct contains a short link and initial link.
 type ShortURL struct {
-	ShortLink   string `json:"result,omitempty"`
-	InitialLink string `json:"url,omitempty"`
+	ShortLink   string `json:"result,omitempty" valid:"-"`
+	InitialLink string `json:"url,omitempty" valid:"url"`
 }
 
 // ShortURLRepo is an interface that contains two methods.
