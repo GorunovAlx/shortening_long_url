@@ -3,10 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
-	"os"
 
 	valid "github.com/asaskevich/govalidator"
+	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -20,9 +21,21 @@ type Handler struct {
 	Repo storage.ShortURLRepo
 }
 
+type Config struct {
+	ServerAddress string `env:"SERVER_ADDRESS" envDefault:"8080"`
+	BaseURL       string `env:"BASE_URL" envDefault:"http://localhost:8080/"`
+}
+
+var Cfg Config
+
 // NewHandler returns a newly initialized Handler object that implements
 // the ShortURLRepo interface.
 func NewHandler(repo storage.ShortURLRepo) *Handler {
+	err := env.Parse(&Cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	h := &Handler{
 		Mux:  chi.NewMux(),
 		Repo: repo,
@@ -97,10 +110,9 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 			w.Write([]byte(err.Error()))
 			return
 		}
-		bU := os.Getenv("BASE_URL")
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(bU + shortURL))
+		w.Write([]byte(Cfg.BaseURL + shortURL))
 	}
 }
 
