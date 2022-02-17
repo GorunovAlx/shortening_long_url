@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 )
@@ -24,6 +25,12 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 		Mux:  chi.NewMux(),
 		Repo: repo,
 	}
+
+	h.Use(middleware.RequestID)
+	h.Use(middleware.RealIP)
+	h.Use(middleware.Logger)
+	h.Use(middleware.Recoverer)
+
 	h.Post("/", CreateShortURLHandler(repo))
 	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
 	h.Post("/api/shorten", CreateShortURLJSONHandler(repo))
