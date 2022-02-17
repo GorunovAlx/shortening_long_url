@@ -27,7 +27,7 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 	h.Post("/", CreateShortURLHandler(repo))
 	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
 	h.Post("/api/shorten", CreateShortURLJSONHandler(repo))
-	//h.Get("/api/expand", GetInitialLinkJSONHandler(repo))
+	h.Get("/api/expand/{shortURL}", GetInitialLinkJSONHandler(repo))
 
 	return h
 }
@@ -95,7 +95,6 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	}
 }
 
-/*
 func GetInitialLinkJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "shortURL")
@@ -116,7 +115,7 @@ func GetInitialLinkJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }
-*/
+
 // GetInitialLinkHandler returns a http.HandlerFunc that takes shortURL parameter
 // containing a short url and returns the initial link in the location header.
 func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {

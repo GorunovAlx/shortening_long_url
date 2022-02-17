@@ -138,6 +138,8 @@ func TestCreateShortURLJSONHandler(t *testing.T) {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(result.Body)
 			str := buf.String()
+			err := result.Body.Close()
+			require.NoError(t, err)
 			assert.Equal(t, tt.want.expected, str)
 		})
 	}
