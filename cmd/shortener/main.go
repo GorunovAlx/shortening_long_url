@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/handlers"
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
@@ -11,5 +12,6 @@ import (
 func main() {
 	urlStorage := storage.NewShortURLStorage()
 	handler := handlers.NewHandler(urlStorage)
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	adr := os.Getenv("SERVER_ADDRESS")
+	log.Fatal(http.ListenAndServe(adr, handler))
 }

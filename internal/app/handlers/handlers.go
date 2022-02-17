@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/go-chi/chi/v5"
@@ -96,9 +97,10 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 			w.Write([]byte(err.Error()))
 			return
 		}
+		bU := os.Getenv("BASE_URL")
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("http://localhost:8080/" + shortURL))
+		w.Write([]byte(bU + shortURL))
 	}
 }
 
