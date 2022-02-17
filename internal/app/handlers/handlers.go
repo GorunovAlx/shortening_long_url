@@ -35,7 +35,7 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 	h.Post("/", CreateShortURLHandler(repo))
 	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
 	h.Post("/api/shorten", CreateShortURLJSONHandler(repo))
-	h.Get("/api/expand/{shortURL}", GetInitialLinkJSONHandler(repo))
+	h.Get("/api/expand", GetInitialLinkJSONHandler(repo))
 
 	return h
 }
@@ -47,8 +47,8 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		isUrl := valid.IsURL(url.InitialLink)
-		if !isUrl {
+		isURL := valid.IsURL(url.InitialLink)
+		if !isURL {
 			w.WriteHeader(400)
 			w.Write([]byte("Incorrect link"))
 			return
@@ -104,33 +104,31 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 
 func GetInitialLinkJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		shortURL := chi.URLParam(r, "shortURL")
-		if shortURL == "" {
-			w.WriteHeader(400)
-			w.Write([]byte("short url was not sent"))
+		var url storage.ShortURL
+		if err := json.NewDecoder(r.Body).Decode(&url); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		link, err := urlStorage.GetInitialLink(shortURL)
+		link, err := urlStorage.GetInitialLink(url.ShortLink)
 		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(err.Error()))
 			return
 		}
-		/*
-			res := storage.ShortURL{
-				InitialLink: link,
-			}
+		res := storage.ShortURL{
+			InitialLink: link,
+		}
 
-				resp, err := json.Marshal(res)
-				if err != nil {
-					w.WriteHeader(400)
-					w.Write([]byte(err.Error()))
-					return
-				} */
-		//w.Header().Set("content-type", "application/json")
-		w.Header().Add("Location", link)
+		resp, err := json.Marshal(res)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		w.Header().Set("content-type", "application/json")
+		//w.Header().Add("Location", link)
 		w.WriteHeader(http.StatusTemporaryRedirect)
-		//w.Write(resp)
+		w.Write(resp)
 	}
 }
 
