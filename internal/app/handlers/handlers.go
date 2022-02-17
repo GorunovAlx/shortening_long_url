@@ -115,16 +115,17 @@ func GetInitialLinkJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			w.Write([]byte(err.Error()))
 			return
 		}
-		res := storage.ShortURL{
-			InitialLink: link,
-		}
 		/*
-			resp, err := json.Marshal(res)
-			if err != nil {
-				w.WriteHeader(400)
-				w.Write([]byte(err.Error()))
-				return
-			} */
+			res := storage.ShortURL{
+				InitialLink: link,
+			}
+
+				resp, err := json.Marshal(res)
+				if err != nil {
+					w.WriteHeader(400)
+					w.Write([]byte(err.Error()))
+					return
+				} */
 		//w.Header().Set("content-type", "application/json")
 		w.Header().Add("Location", link)
 		w.WriteHeader(http.StatusTemporaryRedirect)
