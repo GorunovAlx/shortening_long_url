@@ -104,21 +104,6 @@ func TestCreateShortURLJSONHandler(t *testing.T) {
 				expected:    `{"result":"4"}`,
 			},
 		},
-		{
-			name: "simple test #3(Post)",
-			st: map[string]string{
-				"1": "yandex.ru",
-				"2": "google.com",
-				"3": "tutu.ru",
-			},
-			nextID: "4",
-			body:   `{"url":""}`,
-			want: want{
-				statusCode:  400,
-				contentType: "",
-				expected:    "Incorrect link",
-			},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
