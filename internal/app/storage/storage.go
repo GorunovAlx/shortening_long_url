@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -49,8 +48,6 @@ func NewShortURLStorage() (*ShortURLStorage, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(Cfg.FileStoragePath)
 
 	if Cfg.FileStoragePath == "" {
 		return &ShortURLStorage{

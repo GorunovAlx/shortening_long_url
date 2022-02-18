@@ -49,7 +49,7 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 	h.Post("/", CreateShortURLHandler(repo))
 	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
 	h.Post("/api/shorten", CreateShortURLJSONHandler(repo))
-	h.Get("/api/expand/{shortURL}", GetInitialLinkJSONHandler(repo))
+	//h.Get("/api/expand/{shortURL}", GetInitialLinkJSONHandler(repo))
 
 	return h
 }
@@ -82,6 +82,7 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			w.Write([]byte(err.Error()))
 			return
 		}
+
 		w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		w.Write(resp)
@@ -116,6 +117,7 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	}
 }
 
+/*
 func GetInitialLinkJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "shortURL")
@@ -147,11 +149,13 @@ func GetInitialLinkJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		w.Write(resp)
 	}
 }
+*/
 
 // GetInitialLinkHandler returns a http.HandlerFunc that takes shortURL parameter
 // containing a short url and returns the initial link in the location header.
 func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cT := r.Header.Get("Content-Type")
 		shortURL := chi.URLParam(r, "shortURL")
 		if shortURL == "" {
 			w.WriteHeader(400)
@@ -166,7 +170,23 @@ func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Add("Location", link)
-		w.WriteHeader(307)
+		if cT == "application/json" {
+			res := storage.ShortURL{
+				InitialLink: link,
+			}
+
+			resp, err := json.Marshal(res)
+			if err != nil {
+				w.WriteHeader(400)
+				w.Write([]byte(err.Error()))
+				return
+			}
+			w.Write(resp)
+			w.Header().Set("content-type", "application/json")
+			w.WriteHeader(307)
+		} else {
+			w.Header().Add("Location", link)
+			w.WriteHeader(307)
+		}
 	}
 }
