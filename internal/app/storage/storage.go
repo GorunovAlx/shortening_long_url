@@ -56,9 +56,11 @@ func NewShortURLStorage() (*ShortURLStorage, error) {
 		}, nil
 	} else {
 		st, err := NewInFileStorage()
+
 		if err != nil {
 			return nil, errors.New("error occured in creating or opening file")
 		}
+
 		return &ShortURLStorage{
 			nextShortLink: 1,
 			storage:       st,
