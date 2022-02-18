@@ -2,9 +2,19 @@ package storage
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"strconv"
 	"sync"
+
+	"github.com/caarlos0/env/v6"
 )
+
+type StorageConfig struct {
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"storage.txt"`
+}
+
+var Cfg StorageConfig
 
 // ShortURL struct contains a short link and initial link.
 type ShortURL struct {
@@ -20,19 +30,42 @@ type ShortURLRepo interface {
 	CreateShortURL(initialLink string) (string, error)
 }
 
+type ReadWriteShortURL interface {
+	ReadShortURL(shortLink string) (*ShortURL, error)
+	WriteShortURL(shortURL *ShortURL) error
+}
+
 // The ShortURLStorage contains data about the next short link,
 // a repository with the type of map and mutex.
 type ShortURLStorage struct {
 	nextShortLink int
-	storage       map[string]ShortURL
+	storage       ReadWriteShortURL
 	s             sync.RWMutex
 }
 
 // NewShortURLStorage returns a newly initialized ShortURLStorage object.
-func NewShortURLStorage() *ShortURLStorage {
-	return &ShortURLStorage{
-		nextShortLink: 1,
-		storage:       make(map[string]ShortURL),
+func NewShortURLStorage() (*ShortURLStorage, error) {
+	err := env.Parse(&Cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(Cfg.FileStoragePath)
+
+	if Cfg.FileStoragePath == "" {
+		return &ShortURLStorage{
+			nextShortLink: 1,
+			storage:       NewInMemoryStorage(),
+		}, nil
+	} else {
+		st, err := NewInFileStorage()
+		if err != nil {
+			return nil, errors.New("error occured in creating or opening file")
+		}
+		return &ShortURLStorage{
+			nextShortLink: 1,
+			storage:       st,
+		}, nil
 	}
 }
 
@@ -41,9 +74,9 @@ func (repo *ShortURLStorage) GetInitialLink(shortLink string) (string, error) {
 	repo.s.RLock()
 	defer repo.s.RUnlock()
 
-	url, ok := repo.storage[shortLink]
-	if !ok {
-		return "", errors.New("the url with this value does not exist")
+	url, err := repo.storage.ReadShortURL(shortLink)
+	if err != nil {
+		return "", errors.New(err.Error())
 	}
 
 	return url.InitialLink, nil
@@ -54,19 +87,16 @@ func (repo *ShortURLStorage) CreateShortURL(initialLink string) (string, error) 
 	repo.s.Lock()
 	defer repo.s.Unlock()
 
-	for _, existing := range repo.storage {
-		if initialLink == existing.InitialLink {
-			return "", errors.New("URL with same location already exists")
-		}
-	}
-
-	sl := strconv.Itoa(repo.nextShortLink)
+	sL := strconv.Itoa(repo.nextShortLink)
 	shortURL := ShortURL{
-		ShortLink:   sl,
+		ShortLink:   sL,
 		InitialLink: initialLink,
 	}
 
-	repo.storage[shortURL.ShortLink] = shortURL
+	err := repo.storage.WriteShortURL(&shortURL)
+	if err != nil {
+		return "", errors.New(err.Error())
+	}
 	repo.nextShortLink += 1
 
 	return shortURL.ShortLink, nil
