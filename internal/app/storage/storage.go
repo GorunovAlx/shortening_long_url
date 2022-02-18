@@ -11,7 +11,7 @@ import (
 )
 
 type StorageConfig struct {
-	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"storage.txt"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
 }
 
 var Cfg StorageConfig
