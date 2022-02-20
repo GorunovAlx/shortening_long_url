@@ -46,8 +46,8 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 	h.Use(middleware.Logger)
 	h.Use(middleware.Recoverer)
 
-	h.Post("/", CreateShortURLHandler(repo))
 	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
+	h.Post("/", CreateShortURLHandler(repo))
 	h.Post("/api/shorten", CreateShortURLJSONHandler(repo))
 
 	return h

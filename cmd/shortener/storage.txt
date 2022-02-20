@@ -1,3 +1,0 @@
-{"result":"1","url":"yandex.com"}
-{"result":"2","url":"tutu.ru"}
-{"result":"1","url":"yandex.ru"}
