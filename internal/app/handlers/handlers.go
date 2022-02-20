@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
+
+	valid "github.com/asaskevich/govalidator"
 
 	"github.com/go-chi/chi/v5"
 
@@ -26,8 +29,43 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 	}
 	h.Post("/", CreateShortURLHandler(repo))
 	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
+	h.Post("/api/shorten", CreateShortURLJSONHandler(repo))
 
 	return h
+}
+
+func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var url storage.ShortURL
+		if err := json.NewDecoder(r.Body).Decode(&url); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		isURL := valid.IsURL(url.InitialLink)
+		if !isURL {
+			w.WriteHeader(400)
+			w.Write([]byte("Incorrect link"))
+			return
+		}
+		shortURL, err := urlStorage.CreateShortURL(url.InitialLink)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		res := storage.ShortURL{
+			ShortLink: shortURL,
+		}
+		resp, err := json.Marshal(res)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write(resp)
+	}
 }
 
 // CreateShortURLHandler returns a http.HandlerFunc that processes the body of the request
