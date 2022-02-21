@@ -10,6 +10,7 @@ import (
 
 func main() {
 	urlStorage := storage.NewShortURLStorage()
-	handler := handlers.NewHandler(urlStorage)
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	//handler := handlers.NewHandler(urlStorage)
+	r := handlers.RegisterRoutes(urlStorage)
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

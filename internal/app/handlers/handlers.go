@@ -35,9 +35,18 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 	h.Post("/", CreateShortURLHandler(repo))
 	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
 	h.Post("/api/shorten", CreateShortURLJSONHandler(repo))
-	h.Get("/api/expand/{shortURL}", GetInitialLinkJSONHandler(repo))
 
 	return h
+}
+
+func RegisterRoutes(repo storage.ShortURLRepo) http.Handler {
+	r := chi.NewRouter()
+	r.Route("/", func(r chi.Router) {
+		r.Post("/", CreateShortURLHandler(repo))
+		r.Get("/{shortURL}", GetInitialLinkHandler(repo))
+		r.Post("/api/shorten", CreateShortURLJSONHandler(repo))
+	})
+	return r
 }
 
 func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
@@ -68,7 +77,7 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			w.Write([]byte(err.Error()))
 			return
 		}
-		w.Header().Set("content-type", "application/json")
+		w.Header().Set("Content-type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		w.Write(resp)
 	}
