@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/caarlos0/env/v6"
@@ -45,6 +46,8 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 	h.Use(middleware.RealIP)
 	h.Use(middleware.Logger)
 	h.Use(middleware.Recoverer)
+
+	h.Use(middleware.Timeout(60 * time.Second))
 
 	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
 	h.Post("/", CreateShortURLHandler(repo))
