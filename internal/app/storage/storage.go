@@ -2,7 +2,7 @@ package storage
 
 import (
 	"errors"
-	"strconv"
+	//"strconv"
 	"sync"
 )
 
@@ -60,9 +60,10 @@ func (repo *ShortURLStorage) CreateShortURL(initialLink string) (string, error) 
 		}
 	}
 
-	sl := strconv.Itoa(repo.nextShortLink)
+	//sl := strconv.Itoa(repo.nextShortLink)
+	sL := "//%2F1/1"
 	shortURL := ShortURL{
-		ShortLink:   sl,
+		ShortLink:   sL,
 		InitialLink: initialLink,
 	}
 
