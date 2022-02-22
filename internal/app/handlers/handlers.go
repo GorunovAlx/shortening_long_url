@@ -123,8 +123,7 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 // containing a short url and returns the initial link in the location header.
 func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//shortURL := chi.URLParam(r, "shortURL")
-		shortURL := r.URL.Path[1:]
+		shortURL := chi.URLParam(r, "shortURL")
 		if shortURL == "" {
 			w.WriteHeader(400)
 			w.Write([]byte("short url was not sent"))
