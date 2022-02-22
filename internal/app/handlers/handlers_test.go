@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,16 +16,22 @@ import (
 
 // mockStorage imitates ShortURLStorage.
 type mockStorage struct {
-	id      int
-	storage map[int]string
+	id      string
+	storage map[string]string
 }
 
-func (ms *mockStorage) idInkrement() {
-	ms.id += 1
+func (ms *mockStorage) idInkrement() error {
+	id, err := strconv.Atoi(ms.id)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	id += 1
+	ms.id = strconv.Itoa(id)
+	return nil
 }
 
 // Imitating ShortURLRepo.GetInitialLink.
-func (ms *mockStorage) GetInitialLink(shortLink int) (string, error) {
+func (ms *mockStorage) GetInitialLink(shortLink string) (string, error) {
 	link := ms.storage[shortLink]
 	if link == "" {
 		return "", errors.New("the url with this value does not exist")
@@ -32,7 +40,7 @@ func (ms *mockStorage) GetInitialLink(shortLink int) (string, error) {
 }
 
 // Imitating ShortURLRepo.CreateShortURL.
-func (ms *mockStorage) CreateShortURL(initialLink string) (int, error) {
+func (ms *mockStorage) CreateShortURL(initialLink string) (string, error) {
 	ms.storage[ms.id] = initialLink
 	defer ms.idInkrement()
 
@@ -54,6 +62,72 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.R
 	require.NoError(t, err)
 
 	return resp
+}
+
+func TestCreateShortURLJSONHandler(t *testing.T) {
+	target := "http://localhost:8080/"
+	type want struct {
+		statusCode  int
+		contentType string
+		expected    string
+	}
+	tests := []struct {
+		name   string
+		st     map[string]string
+		nextID string
+		body   string
+		want   want
+	}{
+		{
+			name:   "simple test #1(Post)",
+			st:     make(map[string]string),
+			nextID: "1",
+			body:   `{"url":"google.com"}`,
+			want: want{
+				statusCode:  201,
+				contentType: "application/json",
+				expected:    `{"result":"1"}`,
+			},
+		},
+		{
+			name: "simple test #2(Post)",
+			st: map[string]string{
+				"1": "yandex.ru",
+				"2": "google.com",
+				"3": "tutu.ru",
+			},
+			nextID: "4",
+			body:   `{"url":"yandex.ru"}`,
+			want: want{
+				statusCode:  201,
+				contentType: "application/json",
+				expected:    `{"result":"4"}`,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ms := mockStorage{
+				id:      tt.nextID,
+				storage: tt.st,
+			}
+			request := httptest.NewRequest(http.MethodPost, target, strings.NewReader(tt.body))
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(CreateShortURLJSONHandler(&ms))
+			h.ServeHTTP(w, request)
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
+
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(result.Body)
+			str := buf.String()
+			err := result.Body.Close()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want.expected, str)
+		})
+	}
 }
 
 // Test for GetInitialLinkHandler.
@@ -95,11 +169,11 @@ func TestGetLinkHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ms := mockStorage{
-				id: 4,
-				storage: map[int]string{
-					1: "yandex.ru",
-					2: "google.com",
-					3: "tutu.ru",
+				id: "4",
+				storage: map[string]string{
+					"1": "yandex.ru",
+					"2": "google.com",
+					"3": "tutu.ru",
 				},
 			}
 			r := NewHandler(&ms)
@@ -126,15 +200,15 @@ func TestCreateShortURLHandler(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		st     map[int]string
-		nextID int
+		st     map[string]string
+		nextID string
 		body   []byte
 		want   want
 	}{
 		{
 			name:   "simple test #1(Post)",
-			st:     make(map[int]string),
-			nextID: 1,
+			st:     make(map[string]string),
+			nextID: "1",
 			body:   []byte("google.com"),
 			want: want{
 				statusCode: 201,
@@ -143,12 +217,12 @@ func TestCreateShortURLHandler(t *testing.T) {
 		},
 		{
 			name: "simple test #2(Post)",
-			st: map[int]string{
-				1: "yandex.ru",
-				2: "google.com",
-				3: "tutu.ru",
+			st: map[string]string{
+				"1": "yandex.ru",
+				"2": "google.com",
+				"3": "tutu.ru",
 			},
-			nextID: 4,
+			nextID: "4",
 			body:   []byte("yandex.ru"),
 			want: want{
 				statusCode: 201,
@@ -157,12 +231,12 @@ func TestCreateShortURLHandler(t *testing.T) {
 		},
 		{
 			name: "simple test #3(Post)",
-			st: map[int]string{
-				1: "yandex.ru",
-				2: "google.com",
-				3: "tutu.ru",
+			st: map[string]string{
+				"1": "yandex.ru",
+				"2": "google.com",
+				"3": "tutu.ru",
 			},
-			nextID: 4,
+			nextID: "4",
 			body:   nil,
 			want: want{
 				statusCode: 400,

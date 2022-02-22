@@ -2,28 +2,29 @@ package storage
 
 import (
 	"errors"
+	"strconv"
 	"sync"
 )
 
 // ShortURL struct contains a short link and initial link.
 type ShortURL struct {
-	ShortLink   int
-	InitialLink string
+	ShortLink   string `json:"result,omitempty" valid:"-"`
+	InitialLink string `json:"url,omitempty" valid:"url"`
 }
 
 // ShortURLRepo is an interface that contains two methods.
 // GetInitialLink takes a short reference and returns the original.
 // CreateShortURL takes an initial reference and returns a short.
 type ShortURLRepo interface {
-	GetInitialLink(shortLink int) (string, error)
-	CreateShortURL(initialLink string) (int, error)
+	GetInitialLink(shortLink string) (string, error)
+	CreateShortURL(initialLink string) (string, error)
 }
 
 // The ShortURLStorage contains data about the next short link,
 // a repository with the type of map and mutex.
 type ShortURLStorage struct {
 	nextShortLink int
-	storage       map[int]ShortURL
+	storage       map[string]ShortURL
 	s             sync.RWMutex
 }
 
@@ -31,12 +32,12 @@ type ShortURLStorage struct {
 func NewShortURLStorage() *ShortURLStorage {
 	return &ShortURLStorage{
 		nextShortLink: 1,
-		storage:       make(map[int]ShortURL),
+		storage:       make(map[string]ShortURL),
 	}
 }
 
 // Get initial link by short link.
-func (repo *ShortURLStorage) GetInitialLink(shortLink int) (string, error) {
+func (repo *ShortURLStorage) GetInitialLink(shortLink string) (string, error) {
 	repo.s.RLock()
 	defer repo.s.RUnlock()
 
@@ -49,18 +50,19 @@ func (repo *ShortURLStorage) GetInitialLink(shortLink int) (string, error) {
 }
 
 // Create short link by initial link.
-func (repo *ShortURLStorage) CreateShortURL(initialLink string) (int, error) {
+func (repo *ShortURLStorage) CreateShortURL(initialLink string) (string, error) {
 	repo.s.Lock()
 	defer repo.s.Unlock()
 
 	for _, existing := range repo.storage {
 		if initialLink == existing.InitialLink {
-			return -1, errors.New("URL with same location already exists")
+			return "", errors.New("URL with same location already exists")
 		}
 	}
 
+	sl := strconv.Itoa(repo.nextShortLink)
 	shortURL := ShortURL{
-		ShortLink:   repo.nextShortLink,
+		ShortLink:   sl,
 		InitialLink: initialLink,
 	}
 
