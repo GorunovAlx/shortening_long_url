@@ -47,8 +47,7 @@ func RegisterRoutes(repo storage.ShortURLRepo) http.Handler {
 
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", CreateShortURLHandler(repo))
-		//r.Get("/{shortURL}", GetInitialLinkHandler(repo))
-		r.Get("/", GetInitialLinkHandler(repo))
+		r.Get("/{shortURL}", GetInitialLinkHandler(repo))
 		r.Post("/api/shorten", CreateShortURLJSONHandler(repo))
 	})
 
