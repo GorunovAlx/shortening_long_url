@@ -24,8 +24,8 @@ type Handler struct {
 
 //
 type Config struct {
-	ServerAddress string `env:"SERVER_ADDRESS" envDefault:":8080" valid:"type(port)"`
-	BaseURL       string `env:"BASE_URL" envDefault:"http://localhost:8080/"`
+	ServerAddress []string `env:"SERVER_ADDRESS" envSeparator:":" envDefault:":8080"`
+	BaseURL       string   `env:"BASE_URL" envDefault:"http://localhost:8080/"`
 }
 
 var Cfg Config
@@ -37,8 +37,11 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(Cfg.ServerAddress)
-	log.Println(Cfg.BaseURL)
+
+	isPort := valid.IsPort(Cfg.ServerAddress[1])
+	if !isPort {
+		Cfg.ServerAddress[1] = ":8080"
+	}
 
 	h := &Handler{
 		Mux:  chi.NewMux(),

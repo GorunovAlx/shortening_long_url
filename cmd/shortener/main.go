@@ -11,7 +11,7 @@ import (
 )
 
 func Init() {
-	flag.StringVar(&handlers.Cfg.ServerAddress, "a", "localhost:8080", "server address to listen on")
+	//flag.StringVar(&handlers.Cfg.ServerAddress, "a", "localhost:8080", "server address to listen on")
 	flag.StringVar(&handlers.Cfg.BaseURL, "b", "http://localhost:8080/", "base url to listen on")
 	flag.StringVar(&storage.Cfg.FileStoragePath, "f", "", "file storage path")
 }
@@ -24,5 +24,5 @@ func main() {
 		log.Fatal(errors.New("an error occurred while creating the repository "))
 	}
 	handler := handlers.NewHandler(urlStorage)
-	log.Fatal(http.ListenAndServe(handlers.Cfg.ServerAddress, handler))
+	log.Fatal(http.ListenAndServe(handlers.Cfg.ServerAddress[1], handler))
 }
