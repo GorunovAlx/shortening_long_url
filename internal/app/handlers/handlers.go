@@ -37,6 +37,8 @@ func NewHandler(repo storage.ShortURLRepo) *Handler {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println(Cfg.ServerAddress)
+	log.Println(Cfg.BaseURL)
 
 	h := &Handler{
 		Mux:  chi.NewMux(),
