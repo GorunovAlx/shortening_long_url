@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
@@ -24,8 +25,8 @@ type Handler struct {
 
 //
 type Config struct {
-	ServerAddress []string `env:"SERVER_ADDRESS" envSeparator:":" envDefault:":8080"`
-	BaseURL       string   `env:"BASE_URL" envDefault:"http://localhost:8080/"`
+	ServerAddress string `env:"SERVER_ADDRESS" envDefault:":8080" valid:"customHostPortValidator"`
+	BaseURL       string `env:"BASE_URL" envDefault:"http://localhost:8080/"`
 }
 
 var Cfg Config
@@ -33,14 +34,22 @@ var Cfg Config
 // NewHandler returns a newly initialized Handler object that implements
 // the ShortURLRepo interface.
 func NewHandler(repo storage.ShortURLRepo) *Handler {
+	valid.CustomTypeTagMap.Set("customHostPortValidator", valid.CustomTypeValidator(func(i interface{}, context interface{}) bool {
+		switch v := i.(type) {
+		case string:
+			hostPort := strings.Split(v, ":")
+			isPort := valid.IsPort(hostPort[1])
+			if !isPort {
+				return false
+			}
+			return true
+		}
+		return false
+	}))
+
 	err := env.Parse(&Cfg)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	isPort := valid.IsPort(Cfg.ServerAddress[1])
-	if !isPort {
-		Cfg.ServerAddress[1] = ":8080"
 	}
 
 	h := &Handler{
