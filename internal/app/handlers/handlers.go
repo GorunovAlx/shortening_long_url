@@ -130,6 +130,7 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "shortURL")
+		log.Println("Get link on path: " + shortURL)
 		if shortURL == "" {
 			w.WriteHeader(400)
 			w.Write([]byte("short url was not sent"))
@@ -137,6 +138,7 @@ func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		}
 
 		link, err := urlStorage.GetInitialLink(shortURL)
+		log.Println("Get initial link: " + link)
 		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(err.Error()))
