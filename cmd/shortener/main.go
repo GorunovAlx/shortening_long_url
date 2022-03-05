@@ -13,13 +13,14 @@ import (
 
 func Init() {
 	flag.StringVar(&handlers.Cfg.ServerAddress, "a", "localhost:8080", "server address to listen on")
-	flag.StringVar(&handlers.Cfg.BaseURL, "b", "http://localhost:8080/", "base url to listen on")
+	flag.StringVar(&handlers.Cfg.BaseURL, "b", "http://localhost:8080", "base url to listen on")
 	flag.StringVar(&storage.Cfg.FileStoragePath, "f", "", "file storage path")
 }
 
 func main() {
 	Init()
 	flag.Parse()
+	log.Println(os.Args)
 	urlStorage, err := storage.NewShortURLStorage()
 	if err != nil {
 		log.Fatal(errors.New("an error occurred while creating the repository "))
