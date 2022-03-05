@@ -75,7 +75,7 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			return
 		}
 		shortURL, err := urlStorage.CreateShortURL(url.InitialLink)
-		shortURL = Cfg.BaseURL + shortURL
+		shortURL = Cfg.BaseURL + "/" + shortURL
 		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(err.Error()))
@@ -121,7 +121,7 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(Cfg.BaseURL + shortURL))
+		w.Write([]byte(Cfg.BaseURL + "/" + shortURL))
 	}
 }
 

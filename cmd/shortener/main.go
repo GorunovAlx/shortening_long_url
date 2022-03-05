@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/handlers"
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
@@ -24,5 +25,6 @@ func main() {
 		log.Fatal(errors.New("an error occurred while creating the repository "))
 	}
 	handler := handlers.NewHandler(urlStorage)
+	log.Println(os.Environ())
 	log.Fatal(http.ListenAndServe(handlers.Cfg.ServerAddress, handler))
 }
