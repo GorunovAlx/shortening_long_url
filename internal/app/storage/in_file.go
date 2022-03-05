@@ -88,9 +88,11 @@ func (f *InFileStorage) ReadShortURL(shortLink string) (*ShortURL, error) {
 	}
 	defer sc.Close()
 
-	if !sc.scanner.Scan() {
-		return nil, sc.scanner.Err()
-	}
+	/*
+		if !sc.scanner.Scan() {
+			return nil, sc.scanner.Err()
+		}
+	*/
 
 	for sc.scanner.Scan() {
 		data := sc.scanner.Bytes()

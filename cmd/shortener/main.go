@@ -25,6 +25,6 @@ func main() {
 		log.Fatal(errors.New("an error occurred while creating the repository "))
 	}
 	handler := handlers.NewHandler(urlStorage)
-	log.Println(os.Environ())
+	log.Println(os.LookupEnv("FILE_STORAGE_PATH"))
 	log.Fatal(http.ListenAndServe(handlers.Cfg.ServerAddress, handler))
 }
