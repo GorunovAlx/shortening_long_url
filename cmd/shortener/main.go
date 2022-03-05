@@ -13,12 +13,12 @@ import (
 )
 
 func Init() {
-	flag.StringVar(&handlers.Cfg.ServerAddress, "a", handlers.Cfg.ServerAddress, "server address to listen on")
-	flag.Lookup("a").NoOptDefVal = handlers.Cfg.ServerAddress
-	flag.StringVar(&handlers.Cfg.BaseURL, "b", handlers.Cfg.BaseURL, "base url to listen on")
-	flag.Lookup("b").NoOptDefVal = handlers.Cfg.BaseURL
-	flag.StringVar(&storage.Cfg.FileStoragePath, "f", storage.Cfg.FileStoragePath, "file storage path")
-	flag.Lookup("c").NoOptDefVal = storage.Cfg.FileStoragePath
+	flag.StringVar(&handlers.Cfg.ServerAddress, "a", "localhost:8080", "server address to listen on")
+	//flag.Lookup("a").NoOptDefVal = handlers.Cfg.ServerAddress
+	flag.StringVar(&handlers.Cfg.BaseURL, "b", "http://localhost:8080", "base url to listen on")
+	//flag.Lookup("b").NoOptDefVal = handlers.Cfg.BaseURL
+	flag.StringVar(&storage.Cfg.FileStoragePath, "f", "", "file storage path")
+	//flag.Lookup("c").NoOptDefVal = storage.Cfg.FileStoragePath
 }
 
 func main() {
