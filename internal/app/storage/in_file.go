@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+
+	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 )
 
 type InFileStorage struct {
@@ -22,7 +24,7 @@ type InFileScanner struct {
 
 func NewInFileStorage() (*InFileStorage, error) {
 	return &InFileStorage{
-		path: Cfg.FileStoragePath,
+		path: configs.Cfg.FileStoragePath,
 	}, nil
 }
 

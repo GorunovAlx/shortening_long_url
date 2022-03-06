@@ -6,6 +6,8 @@ replace github.com/GorunovAlx/shortening_long_url/internal/app/handlers => ../in
 
 replace github.com/GorunovAlx/shortening_long_url/internal/app/storage => ../internal/app/storage
 
+replace github.com/GorunovAlx/shortening_long_url/internal/app/configs => ../internal/app/configs
+
 require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/caarlos0/env/v6 v6.9.1

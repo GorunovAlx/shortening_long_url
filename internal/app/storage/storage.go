@@ -4,14 +4,9 @@ import (
 	"errors"
 	"strconv"
 	"sync"
-	//"github.com/caarlos0/env/v6"
+
+	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 )
-
-type StorageConfig struct {
-	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
-}
-
-var Cfg StorageConfig
 
 // ShortURL struct contains a short link and initial link.
 type ShortURL struct {
@@ -42,13 +37,7 @@ type ShortURLStorage struct {
 
 // NewShortURLStorage returns a newly initialized ShortURLStorage object.
 func NewShortURLStorage() (*ShortURLStorage, error) {
-	/*
-		err := env.Parse(&Cfg)
-		if err != nil {
-			log.Fatal(err)
-		}
-	*/
-	if Cfg.FileStoragePath == "" {
+	if configs.Cfg.FileStoragePath == "" {
 		return &ShortURLStorage{
 			nextShortLink: 1,
 			storage:       NewInMemoryStorage(),

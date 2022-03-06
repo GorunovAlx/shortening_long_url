@@ -8,10 +8,10 @@ import (
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
-	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 )
 
@@ -22,26 +22,9 @@ type Handler struct {
 	Repo storage.ShortURLRepo
 }
 
-//
-type Config struct {
-	ServerAddress string `env:"SERVER_ADDRESS" envDefault:":8080"`
-	BaseURL       string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-}
-
-var Cfg Config
-
-func Init() {
-	err := env.Parse(&Cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(Cfg)
-}
-
 // NewHandler returns a newly initialized Handler object that implements
 // the ShortURLRepo interface.
 func NewHandler(repo storage.ShortURLRepo) *Handler {
-	//Init()
 	h := &Handler{
 		Mux:  chi.NewMux(),
 		Repo: repo,
@@ -75,7 +58,7 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			return
 		}
 		shortURL, err := urlStorage.CreateShortURL(url.InitialLink)
-		shortURL = Cfg.BaseURL + "/" + shortURL
+		shortURL = configs.Cfg.BaseURL + "/" + shortURL
 		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(err.Error()))
@@ -121,7 +104,7 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(Cfg.BaseURL + "/" + shortURL))
+		w.Write([]byte(configs.Cfg.BaseURL + "/" + shortURL))
 	}
 }
 
