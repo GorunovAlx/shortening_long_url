@@ -9,8 +9,12 @@ import (
 )
 
 type Config struct {
-	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:":8080"`
-	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	SERVER_HOST   string `env:"SERVER_HOST" envDefault:"localhost"`
+	SERVER_PORT   string `env:"SERVER_PORT" envDefault:":3000"`
+	ServerAddress string `env:"$SERVER_HOST:$SERVER_PORT"`
+	BaseURL       string `env:"http://$SERVER_HOST:$SERVER_PORT"`
+	//ServerAddress   string `env:"SERVER_ADDRESS" envDefault:":8080" ${HOME}`
+	//BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
 }
 
