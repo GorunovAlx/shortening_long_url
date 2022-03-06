@@ -2,11 +2,9 @@ package storage
 
 import (
 	"errors"
-	"log"
 	"strconv"
 	"sync"
-
-	"github.com/caarlos0/env/v6"
+	//"github.com/caarlos0/env/v6"
 )
 
 type StorageConfig struct {
@@ -44,11 +42,12 @@ type ShortURLStorage struct {
 
 // NewShortURLStorage returns a newly initialized ShortURLStorage object.
 func NewShortURLStorage() (*ShortURLStorage, error) {
-	err := env.Parse(&Cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	/*
+		err := env.Parse(&Cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 	if Cfg.FileStoragePath == "" {
 		return &ShortURLStorage{
 			nextShortLink: 1,

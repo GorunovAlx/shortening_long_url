@@ -41,7 +41,7 @@ func Init() {
 // NewHandler returns a newly initialized Handler object that implements
 // the ShortURLRepo interface.
 func NewHandler(repo storage.ShortURLRepo) *Handler {
-	Init()
+	//Init()
 	h := &Handler{
 		Mux:  chi.NewMux(),
 		Repo: repo,
