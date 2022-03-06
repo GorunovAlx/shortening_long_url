@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	ServerAddress   string `env:"SERVER_ADDRESS"`
-	BaseURL         string `env:"BASE_URL" envDefault:"http://${SERVER_ADDRESS}"`
+	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:":3000"`
+	BaseURL         string `env:"BASE_URL" envDefault:"http://127.0.0.1${SERVER_ADDRESS}"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
 }
 
