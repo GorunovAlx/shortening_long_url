@@ -176,7 +176,7 @@ func TestGetLinkHandler(t *testing.T) {
 					"3": "tutu.ru",
 				},
 			}
-			r := NewHandler(&ms)
+			r := NewRouter(&ms)
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 			result := testRequest(t, ts, "GET", tt.path)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"net/http"
 
@@ -12,10 +11,7 @@ import (
 
 func main() {
 	configs.SetConfigs()
-	urlStorage, err := storage.NewShortURLStorage()
-	if err != nil {
-		log.Fatal(errors.New("an error occurred while creating the repository "))
-	}
-	handler := handlers.NewHandler(urlStorage)
+	urlStorage := storage.NewStorage()
+	handler := handlers.NewRouter(urlStorage)
 	log.Fatal(http.ListenAndServe(configs.Cfg.ServerAddress, handler))
 }

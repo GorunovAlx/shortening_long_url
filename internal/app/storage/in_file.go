@@ -8,59 +8,68 @@ import (
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 )
 
-type InFileStorage struct {
+// FileStorage contains the path file.
+type FileStorage struct {
 	path string
 }
 
-type InFileWriter struct {
+// FileWriter contains a file for writing and bufio.Writer.
+type FileWriter struct {
 	file   *os.File
 	writer *bufio.Writer
 }
 
-type InFileScanner struct {
+// FileScanner contains a file for scanning and bufio.Scanner.
+type FileScanner struct {
 	file    *os.File
 	scanner *bufio.Scanner
 }
 
-func NewInFileStorage() (*InFileStorage, error) {
-	return &InFileStorage{
+// Returns a pointer to FileStorage with path file from config.
+func NewInFileStorage() *FileStorage {
+	return &FileStorage{
 		path: configs.Cfg.FileStoragePath,
-	}, nil
+	}
 }
 
-func NewInFileWriter(st *InFileStorage) (*InFileWriter, error) {
+// Returns a newly FileWriter.
+func NewInFileWriter(st *FileStorage) (*FileWriter, error) {
 	file, err := os.OpenFile(st.path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		return nil, err
 	}
 
-	return &InFileWriter{
+	return &FileWriter{
 		file:   file,
 		writer: bufio.NewWriter(file),
 	}, nil
 }
 
-func (w *InFileWriter) Close() error {
+// Close file for FileWriter.
+func (w *FileWriter) Close() error {
 	return w.file.Close()
 }
 
-func NewInFileScanner(st *InFileStorage) (*InFileScanner, error) {
+// Returns a newly FileScanner.
+func NewInFileScanner(st *FileStorage) (*FileScanner, error) {
 	file, err := os.OpenFile(st.path, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
 		return nil, err
 	}
 
-	return &InFileScanner{
+	return &FileScanner{
 		file:    file,
 		scanner: bufio.NewScanner(file),
 	}, nil
 }
 
-func (w *InFileScanner) Close() error {
+// Close file for FileScanner.
+func (w *FileScanner) Close() error {
 	return w.file.Close()
 }
 
-func (f *InFileStorage) WriteShortURL(shortURL *ShortURL) error {
+// Writes a ShortURL to the file.
+func (f *FileStorage) WriteShortURL(shortURL *ShortURL) error {
 	data, err := json.Marshal(&shortURL)
 	if err != nil {
 		return err
@@ -83,18 +92,13 @@ func (f *InFileStorage) WriteShortURL(shortURL *ShortURL) error {
 	return wr.writer.Flush()
 }
 
-func (f *InFileStorage) ReadShortURL(shortLink string) (*ShortURL, error) {
+// Find and read shortened link and returns ShortURL.
+func (f *FileStorage) ReadShortURL(shortLink string) (*ShortURL, error) {
 	sc, err := NewInFileScanner(f)
 	if err != nil {
 		return nil, err
 	}
 	defer sc.Close()
-
-	/*
-		if !sc.scanner.Scan() {
-			return nil, sc.scanner.Err()
-		}
-	*/
 
 	for sc.scanner.Scan() {
 		data := sc.scanner.Bytes()

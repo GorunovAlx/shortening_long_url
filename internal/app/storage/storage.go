@@ -8,55 +8,55 @@ import (
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 )
 
-// ShortURL struct contains a short link and initial link.
+// ShortURL struct contains a InitialLink - initial link
+// and its shortened link(ShortLink).
 type ShortURL struct {
-	ShortLink   string `json:"result,omitempty" valid:"-"`
 	InitialLink string `json:"url,omitempty" valid:"-"`
+	ShortLink   string `json:"result,omitempty" valid:"-"`
 }
 
-// ShortURLRepo is an interface that contains two methods.
-// GetInitialLink takes a short reference and returns the original.
-// CreateShortURL takes an initial reference and returns a short.
+// ShortURLRepo contains:
+// GetInitialLink takes a short link and returns the initial link;
+// CreateShortURL takes an initial link and returns a shortened.
 type ShortURLRepo interface {
 	GetInitialLink(shortLink string) (string, error)
 	CreateShortURL(initialLink string) (string, error)
 }
 
-type ReadWriteShortURL interface {
+// RWShortURL contains:
+// ReadShortURL takes a short link and returns the ShortURL struct from storage;
+// WriteShortURL takes the ShortURL struct and writes it into the storage.
+type RWShortURL interface {
 	ReadShortURL(shortLink string) (*ShortURL, error)
 	WriteShortURL(shortURL *ShortURL) error
 }
 
-// The ShortURLStorage contains data about the next short link,
-// a repository with the type of map and mutex.
+// The ShortURLStorage contains next short link,
+// storage that implements the interface RWShortURL and RWMutex.
 type ShortURLStorage struct {
 	nextShortLink int
-	storage       ReadWriteShortURL
+	storage       RWShortURL
 	s             sync.RWMutex
 }
 
-// NewShortURLStorage returns a newly initialized ShortURLStorage object.
-func NewShortURLStorage() (*ShortURLStorage, error) {
-	if configs.Cfg.FileStoragePath == "" {
+// The function returns a pointer to the ShortURLStorage structure,
+// where the storage is initialized either by file storage
+// if the file path is not empty in the config, or by in memory storage.
+func NewStorage() *ShortURLStorage {
+	if configs.Cfg.FileStoragePath != "" {
 		return &ShortURLStorage{
 			nextShortLink: 1,
-			storage:       NewInMemoryStorage(),
-		}, nil
-	} else {
-		st, err := NewInFileStorage()
-
-		if err != nil {
-			return nil, errors.New("error occured in creating or opening file")
+			storage:       NewInFileStorage(),
 		}
+	}
 
-		return &ShortURLStorage{
-			nextShortLink: 1,
-			storage:       st,
-		}, nil
+	return &ShortURLStorage{
+		nextShortLink: 1,
+		storage:       NewInMemoryStorage(),
 	}
 }
 
-// Get initial link by short link.
+// Get the initial link by shortened link or an error.
 func (repo *ShortURLStorage) GetInitialLink(shortLink string) (string, error) {
 	repo.s.RLock()
 	defer repo.s.RUnlock()
@@ -69,14 +69,14 @@ func (repo *ShortURLStorage) GetInitialLink(shortLink string) (string, error) {
 	return url.InitialLink, nil
 }
 
-// Create short link by initial link.
+// Create shortened link by initial link.
 func (repo *ShortURLStorage) CreateShortURL(initialLink string) (string, error) {
 	repo.s.Lock()
 	defer repo.s.Unlock()
 
 	sL := strconv.Itoa(repo.nextShortLink)
 	shortURL := ShortURL{
-		ShortLink:   sL,
+		ShortLink:   configs.Cfg.BaseURL + "/" + sL,
 		InitialLink: initialLink,
 	}
 

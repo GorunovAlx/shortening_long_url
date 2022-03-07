@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
@@ -11,39 +10,33 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 )
 
-// Handler is a structure containing the type of chi.Mux
-// and ShortURLRepo interface from storage package.
-type Handler struct {
-	*chi.Mux
-	Repo storage.ShortURLRepo
+// Returns a pointer to a chi.Mux with endpoints:
+// Get /{shortURL} returns the initial link from storage by shortened link.
+// Post / sends initial link in the body and get shortened link in the response body.
+// Post /api/shorten sends json with initial link in the body
+// and get json with shortened link in the response body.
+func NewRouter(repo storage.ShortURLRepo) *chi.Mux {
+	r := chi.NewRouter()
+
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	r.Use(middleware.Timeout(60 * time.Second))
+
+	r.Get("/{shortURL}", GetInitialLinkHandler(repo))
+	r.Post("/", CreateShortURLHandler(repo))
+	r.Post("/api/shorten", CreateShortURLJSONHandler(repo))
+
+	return r
 }
 
-// NewHandler returns a newly initialized Handler object that implements
-// the ShortURLRepo interface.
-func NewHandler(repo storage.ShortURLRepo) *Handler {
-	h := &Handler{
-		Mux:  chi.NewMux(),
-		Repo: repo,
-	}
-
-	h.Use(middleware.RequestID)
-	h.Use(middleware.RealIP)
-	h.Use(middleware.Logger)
-	h.Use(middleware.Recoverer)
-
-	h.Use(middleware.Timeout(60 * time.Second))
-
-	h.Get("/{shortURL}", GetInitialLinkHandler(repo))
-	h.Post("/", CreateShortURLHandler(repo))
-	h.Post("/api/shorten", CreateShortURLJSONHandler(repo))
-
-	return h
-}
-
+// Post a json with an initial link in the request and returns a json
+// with a shortened link in the response.
 func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var url storage.ShortURL
@@ -51,27 +44,27 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		isURL := valid.IsURL(url.InitialLink)
 		if !isURL {
-			w.WriteHeader(400)
-			w.Write([]byte("Incorrect link"))
+			http.Error(w, "Incorrect link", http.StatusBadRequest)
 			return
 		}
+
 		shortURL, err := urlStorage.CreateShortURL(url.InitialLink)
-		shortURL = configs.Cfg.BaseURL + "/" + shortURL
-		log.Println(shortURL)
+
 		if err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte(err.Error()))
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		res := storage.ShortURL{
 			ShortLink: shortURL,
 		}
 		resp, err := json.Marshal(res)
+
 		if err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte(err.Error()))
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -81,32 +74,27 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 	}
 }
 
-// CreateShortURLHandler returns a http.HandlerFunc that processes the body of the request
-// which contains URL and returns a shortened link.
+// Post initial link in the request and returns a shortened link in the response.
 func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		b, err := io.ReadAll(r.Body)
 		if err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte("Incorrect request"))
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		if len(b) == 0 {
-			w.WriteHeader(400)
-			w.Write([]byte("Incorrect request"))
+			http.Error(w, "Incorrect request", http.StatusBadRequest)
 			return
 		}
 
 		shortURL, err := urlStorage.CreateShortURL(string(b))
 		if err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte(err.Error()))
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		log.Println(configs.Cfg.BaseURL + "/" + shortURL)
-		w.Write([]byte(configs.Cfg.BaseURL + "/" + shortURL))
+		w.Write([]byte(shortURL))
 	}
 }
 
@@ -115,18 +103,14 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "shortURL")
-		log.Println("Get link on path: " + shortURL)
 		if shortURL == "" {
-			w.WriteHeader(400)
-			w.Write([]byte("short url was not sent"))
+			http.Error(w, "short url was not sent", http.StatusBadRequest)
 			return
 		}
 
 		link, err := urlStorage.GetInitialLink(shortURL)
-		log.Println("Get initial link: " + link)
 		if err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte(err.Error()))
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
