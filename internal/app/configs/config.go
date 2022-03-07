@@ -1,11 +1,11 @@
 package configs
 
 import (
+	"flag"
 	"log"
 	"os"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/spf13/pflag"
 )
 
 type Config struct {
@@ -16,23 +16,27 @@ type Config struct {
 
 var Cfg Config
 
-func SetConfigs() error {
+func SetConfigs() {
 	parameters := os.Args[1:]
 	log.Println(parameters)
-	if len(parameters) > 0 {
-		pflag.StringVarP(&Cfg.ServerAddress, "a", "a", Cfg.ServerAddress, "server address to listen on")
-		pflag.StringVarP(&Cfg.BaseURL, "b", "b", Cfg.BaseURL, "base url to listen on")
-		pflag.StringVarP(&Cfg.FileStoragePath, "f", "f", Cfg.FileStoragePath, "file storage path")
-		pflag.Parse()
-		log.Println(Cfg)
-		return nil
-	} else {
-		err := env.Parse(&Cfg)
-		if err != nil {
-			return err
-		}
-		log.Println(Cfg)
+
+	err := env.Parse(&Cfg)
+	if err != nil {
+		log.Println(err)
 	}
+
+	if len(parameters) > 0 {
+		if flag.Lookup("a") == nil {
+			flag.StringVar(&Cfg.ServerAddress, "a", Cfg.ServerAddress, "server address to listen on")
+		}
+		if flag.Lookup("b") == nil {
+			flag.StringVar(&Cfg.BaseURL, "b", Cfg.BaseURL, "base url to listen on")
+		}
+		if flag.Lookup("f") == nil {
+			flag.StringVar(&Cfg.FileStoragePath, "f", Cfg.FileStoragePath, "file storage path")
+		}
+		flag.Parse()
+	}
+
 	log.Println(Cfg)
-	return nil
 }
