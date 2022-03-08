@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 )
 
@@ -52,7 +53,7 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		}
 
 		shortURL, err := urlStorage.CreateShortURL(url.InitialLink)
-
+		shortURL = configs.Cfg.BaseURL + "/" + shortURL
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -88,6 +89,7 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		}
 
 		shortURL, err := urlStorage.CreateShortURL(string(b))
+		shortURL = configs.Cfg.BaseURL + "/" + shortURL
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

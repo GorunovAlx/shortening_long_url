@@ -76,7 +76,7 @@ func (repo *ShortURLStorage) CreateShortURL(initialLink string) (string, error) 
 
 	sL := strconv.Itoa(repo.nextShortLink)
 	shortURL := ShortURL{
-		ShortLink:   configs.Cfg.BaseURL + "/" + sL,
+		ShortLink:   sL,
 		InitialLink: initialLink,
 	}
 
