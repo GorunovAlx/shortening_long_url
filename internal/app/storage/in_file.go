@@ -3,6 +3,7 @@ package storage
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"os"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
@@ -70,6 +71,10 @@ func (w *FileScanner) Close() error {
 
 // Writes a ShortURL to the file.
 func (f *FileStorage) WriteShortURL(shortURL *ShortURL) error {
+	if exist, _ := ScanFile(f, shortURL.ShortLink); exist != "" {
+		return errors.New("URL with same location already exists")
+	}
+
 	data, err := json.Marshal(&shortURL)
 	if err != nil {
 		return err
@@ -93,10 +98,14 @@ func (f *FileStorage) WriteShortURL(shortURL *ShortURL) error {
 }
 
 // Find and read shortened link and returns ShortURL.
-func (f *FileStorage) ReadShortURL(shortLink string) (*ShortURL, error) {
+func (f *FileStorage) GetInitialLink(shortLink string) (string, error) {
+	return ScanFile(f, shortLink)
+}
+
+func ScanFile(f *FileStorage, p string) (string, error) {
 	sc, err := NewInFileScanner(f)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer sc.Close()
 
@@ -105,12 +114,12 @@ func (f *FileStorage) ReadShortURL(shortLink string) (*ShortURL, error) {
 		shortURL := ShortURL{}
 		err := json.Unmarshal(data, &shortURL)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-		if shortURL.ShortLink == shortLink {
-			return &shortURL, nil
+		if shortURL.ShortLink == p {
+			return shortURL.InitialLink, nil
 		}
 	}
 
-	return &ShortURL{}, nil
+	return "", nil
 }

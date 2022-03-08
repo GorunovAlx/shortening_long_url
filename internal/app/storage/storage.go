@@ -27,7 +27,7 @@ type ShortURLRepo interface {
 // ReadShortURL takes a short link and returns the ShortURL struct from storage;
 // WriteShortURL takes the ShortURL struct and writes it into the storage.
 type RWShortURL interface {
-	ReadShortURL(shortLink string) (*ShortURL, error)
+	GetInitialLink(shortLink string) (string, error)
 	WriteShortURL(shortURL *ShortURL) error
 }
 
@@ -61,12 +61,12 @@ func (repo *ShortURLStorage) GetInitialLink(shortLink string) (string, error) {
 	repo.s.RLock()
 	defer repo.s.RUnlock()
 
-	url, err := repo.storage.ReadShortURL(shortLink)
+	url, err := repo.storage.GetInitialLink(shortLink)
 	if err != nil {
 		return "", errors.New(err.Error())
 	}
 
-	return url.InitialLink, nil
+	return url, nil
 }
 
 // Create shortened link by initial link.

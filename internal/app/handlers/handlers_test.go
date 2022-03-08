@@ -86,7 +86,7 @@ func TestCreateShortURLJSONHandler(t *testing.T) {
 			want: want{
 				statusCode:  201,
 				contentType: "application/json",
-				expected:    `{"result":"1"}`,
+				expected:    "{\"result\":\"/1\"}",
 			},
 		},
 		{
@@ -101,7 +101,7 @@ func TestCreateShortURLJSONHandler(t *testing.T) {
 			want: want{
 				statusCode:  201,
 				contentType: "application/json",
-				expected:    `{"result":"4"}`,
+				expected:    "{\"result\":\"/4\"}",
 			},
 		},
 	}
@@ -212,7 +212,7 @@ func TestCreateShortURLHandler(t *testing.T) {
 			body:   []byte("google.com"),
 			want: want{
 				statusCode: 201,
-				link:       "http://localhost:8080/1",
+				link:       "/1",
 			},
 		},
 		{
@@ -226,7 +226,7 @@ func TestCreateShortURLHandler(t *testing.T) {
 			body:   []byte("yandex.ru"),
 			want: want{
 				statusCode: 201,
-				link:       "http://localhost:8080/4",
+				link:       "/4",
 			},
 		},
 		{
@@ -240,7 +240,7 @@ func TestCreateShortURLHandler(t *testing.T) {
 			body:   nil,
 			want: want{
 				statusCode: 400,
-				link:       "Incorrect request",
+				link:       "Incorrect request\n",
 			},
 		},
 	}

@@ -53,14 +53,14 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		}
 
 		shortURL, err := urlStorage.CreateShortURL(url.InitialLink)
-		shortURL = configs.Cfg.BaseURL + "/" + shortURL
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		res := storage.ShortURL{
-			ShortLink: shortURL,
+			ShortLink: configs.Cfg.BaseURL + "/" + shortURL,
 		}
 		resp, err := json.Marshal(res)
 
