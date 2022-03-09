@@ -64,6 +64,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.R
 	return resp
 }
 
+// Test for CreateShortURLJSONHandler.
 func TestCreateShortURLJSONHandler(t *testing.T) {
 	target := "http://localhost:8080/"
 	type want struct {

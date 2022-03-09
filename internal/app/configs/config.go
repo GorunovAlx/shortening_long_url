@@ -22,7 +22,7 @@ var Cfg Config
 
 // Parsing the environment variables and returns an error, interrupting program execution.
 // Checks if flags are passed, the config will be initialized.
-func SetConfigs() {
+func SetConfig() {
 	parameters := os.Args[1:]
 
 	if err := env.Parse(&Cfg); err != nil {

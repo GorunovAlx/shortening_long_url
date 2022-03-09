@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	configs.SetConfigs()
+	configs.SetConfig()
 	urlStorage := storage.NewStorage()
 	handler := handlers.NewRouter(urlStorage)
 	log.Fatal(http.ListenAndServe(configs.Cfg.ServerAddress, handler))

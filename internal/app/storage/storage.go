@@ -24,7 +24,7 @@ type ShortURLRepo interface {
 }
 
 // RWShortURL contains:
-// ReadShortURL takes a short link and returns the ShortURL struct from storage;
+// GetInitialLink takes a short link and returns the initial link from storage;
 // WriteShortURL takes the ShortURL struct and writes it into the storage.
 type RWShortURL interface {
 	GetInitialLink(shortLink string) (string, error)
