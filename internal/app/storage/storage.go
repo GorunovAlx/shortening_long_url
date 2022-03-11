@@ -71,7 +71,11 @@ func (repo *ShortURLStorage) CreateShortURL(initialLink string) (string, error) 
 	repo.s.Lock()
 	defer repo.s.Unlock()
 
-	shortenedURL := gen.GenerateShortLink(initialLink)
+	shortenedURL, e := gen.GenerateShortLink(initialLink)
+	if e != nil {
+		return "", errors.New(e.Error())
+	}
+
 	shortURL := ShortURL{
 		ShortLink:   shortenedURL,
 		InitialLink: initialLink,
