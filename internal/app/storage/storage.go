@@ -2,10 +2,10 @@ package storage
 
 import (
 	"errors"
-	"strconv"
 	"sync"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
+	gen "github.com/GorunovAlx/shortening_long_url/internal/app/generators"
 )
 
 // ShortURL struct contains a InitialLink - initial link
@@ -31,12 +31,11 @@ type RWShortURL interface {
 	WriteShortURL(shortURL *ShortURL) error
 }
 
-// The ShortURLStorage contains next short link,
-// storage that implements the interface RWShortURL and RWMutex.
+// The ShortURLStorage contains storage that implements
+// the interface RWShortURL and RWMutex.
 type ShortURLStorage struct {
-	nextShortLink int
-	storage       RWShortURL
-	s             sync.RWMutex
+	storage RWShortURL
+	s       sync.RWMutex
 }
 
 // The function returns a pointer to the ShortURLStorage structure,
@@ -45,14 +44,12 @@ type ShortURLStorage struct {
 func NewStorage() *ShortURLStorage {
 	if configs.Cfg.FileStoragePath != "" {
 		return &ShortURLStorage{
-			nextShortLink: 1,
-			storage:       NewInFileStorage(),
+			storage: NewInFileStorage(),
 		}
 	}
 
 	return &ShortURLStorage{
-		nextShortLink: 1,
-		storage:       NewInMemoryStorage(),
+		storage: NewInMemoryStorage(),
 	}
 }
 
@@ -74,9 +71,9 @@ func (repo *ShortURLStorage) CreateShortURL(initialLink string) (string, error) 
 	repo.s.Lock()
 	defer repo.s.Unlock()
 
-	sL := strconv.Itoa(repo.nextShortLink)
+	shortenedURL := gen.GenerateShortLink(initialLink)
 	shortURL := ShortURL{
-		ShortLink:   sL,
+		ShortLink:   shortenedURL,
 		InitialLink: initialLink,
 	}
 
@@ -84,7 +81,6 @@ func (repo *ShortURLStorage) CreateShortURL(initialLink string) (string, error) 
 	if err != nil {
 		return "", errors.New(err.Error())
 	}
-	repo.nextShortLink += 1
 
 	return shortURL.ShortLink, nil
 }

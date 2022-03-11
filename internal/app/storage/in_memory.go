@@ -29,7 +29,7 @@ func (m *InMemoryStorage) GetInitialLink(shortLink string) (string, error) {
 func (m *InMemoryStorage) WriteShortURL(shortURL *ShortURL) error {
 	for _, existing := range m.storage {
 		if shortURL.InitialLink == existing {
-			return errors.New("URL with same location already exists")
+			return nil
 		}
 	}
 	m.storage[shortURL.ShortLink] = shortURL.InitialLink
