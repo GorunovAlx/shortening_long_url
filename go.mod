@@ -6,8 +6,15 @@ replace github.com/GorunovAlx/shortening_long_url/internal/app/handlers => ../in
 
 replace github.com/GorunovAlx/shortening_long_url/internal/app/storage => ../internal/app/storage
 
+replace github.com/GorunovAlx/shortening_long_url/internal/app/configs => ../internal/app/configs
+
+replace github.com/GorunovAlx/shortening_long_url/internal/app/generators => ../internal/app/generators
+
 require (
+	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
+	github.com/caarlos0/env/v6 v6.9.1
 	github.com/go-chi/chi/v5 v5.0.7
+	github.com/itchyny/base58-go v0.2.0
 	github.com/stretchr/testify v1.7.0
 )
 
