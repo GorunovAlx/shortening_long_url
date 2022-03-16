@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
@@ -26,14 +28,81 @@ func NewRouter(repo storage.ShortURLRepo) *chi.Mux {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-
 	r.Use(middleware.Timeout(60 * time.Second))
+
+	r.Use(mGzipWriterHandle)
+	r.Use(mGzipReaderHandle)
 
 	r.Get("/{shortURL}", GetInitialLinkHandler(repo))
 	r.Post("/", CreateShortURLHandler(repo))
 	r.Post("/api/shorten", CreateShortURLJSONHandler(repo))
 
 	return r
+}
+
+//
+type gzipWriter struct {
+	http.ResponseWriter
+	Writer io.Writer
+}
+
+//
+func (w gzipWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+//
+func mGzipWriterHandle(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		if err != nil {
+			io.WriteString(w, err.Error())
+			return
+		}
+		defer gz.Close()
+
+		w.Header().Set("Content-Encoding", "gzip")
+		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+	})
+}
+
+//
+func mGzipReaderHandle(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			next.ServeHTTP(w, r)
+			return
+		}
+		var reader io.Reader
+
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			reader = gz
+			defer gz.Close()
+		} else {
+			reader = r.Body
+		}
+
+		body := io.NopCloser(reader)
+		r.Body = body
+
+		w.Header().Set("Accept-Encoding", "gzip")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Post a json with an initial link in the request and returns a json
