@@ -54,7 +54,7 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 //
 func mGzipWriterHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
+		if r.Method != http.MethodGet {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -79,7 +79,7 @@ func mGzipWriterHandle(next http.Handler) http.Handler {
 //
 func mGzipReaderHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
+		if r.Method != http.MethodPost {
 			next.ServeHTTP(w, r)
 			return
 		}
