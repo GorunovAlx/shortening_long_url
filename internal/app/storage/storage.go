@@ -13,6 +13,12 @@ import (
 type ShortURL struct {
 	InitialLink string `json:"url,omitempty" valid:"-"`
 	ShortLink   string `json:"result,omitempty" valid:"-"`
+	UserID      uint32 `json:"user_id,omitempty"`
+}
+
+type ShortURLByUser struct {
+	ShortLink   string `json:"short_url,omitempty" valid:"-"`
+	InitialLink string `json:"original_url,omitempty" valid:"-"`
 }
 
 // ShortURLRepo contains:
@@ -20,21 +26,23 @@ type ShortURL struct {
 // CreateShortURL takes an initial link and returns a shortened.
 type ShortURLRepo interface {
 	GetInitialLink(shortLink string) (string, error)
-	CreateShortURL(initialLink string) (string, error)
+	CreateShortURL(shortURL *ShortURL) (string, error)
+	GetAllShortURLUser(id uint32) ([]ShortURLByUser, error)
 }
 
 // RWShortURL contains:
 // GetInitialLink takes a short link and returns the initial link from storage;
 // WriteShortURL takes the ShortURL struct and writes it into the storage.
-type RWShortURL interface {
+type StorageOperations interface {
 	GetInitialLink(shortLink string) (string, error)
 	WriteShortURL(shortURL *ShortURL) error
+	GetAllShortURLByUser(userID uint32) ([]ShortURLByUser, error)
 }
 
 // The ShortURLStorage contains storage that implements
 // the interface RWShortURL and RWMutex.
 type ShortURLStorage struct {
-	storage RWShortURL
+	storage StorageOperations
 	s       sync.RWMutex
 }
 
@@ -67,24 +75,32 @@ func (repo *ShortURLStorage) GetInitialLink(shortLink string) (string, error) {
 }
 
 // Create shortened link by initial link.
-func (repo *ShortURLStorage) CreateShortURL(initialLink string) (string, error) {
+func (repo *ShortURLStorage) CreateShortURL(shortURL *ShortURL) (string, error) {
 	repo.s.Lock()
 	defer repo.s.Unlock()
 
-	shortenedURL, e := gen.GenerateShortLink(initialLink)
+	shortenedURL, e := gen.GenerateShortLink(shortURL.InitialLink)
 	if e != nil {
 		return "", errors.New(e.Error())
 	}
 
-	shortURL := ShortURL{
-		ShortLink:   shortenedURL,
-		InitialLink: initialLink,
-	}
-
-	err := repo.storage.WriteShortURL(&shortURL)
+	shortURL.ShortLink = shortenedURL
+	err := repo.storage.WriteShortURL(shortURL)
 	if err != nil {
 		return "", errors.New(err.Error())
 	}
 
 	return shortURL.ShortLink, nil
+}
+
+func (repo *ShortURLStorage) GetAllShortURLUser(id uint32) ([]ShortURLByUser, error) {
+	repo.s.RLock()
+	defer repo.s.RUnlock()
+
+	result, err := repo.storage.GetAllShortURLByUser(id)
+	if err != nil {
+		return nil, errors.New(err.Error())
+	}
+
+	return result, nil
 }

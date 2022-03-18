@@ -12,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 )
 
 // mockStorage imitates ShortURLStorage.
@@ -40,11 +42,15 @@ func (ms *mockStorage) GetInitialLink(shortLink string) (string, error) {
 }
 
 // Imitating ShortURLRepo.CreateShortURL.
-func (ms *mockStorage) CreateShortURL(initialLink string) (string, error) {
-	ms.storage[ms.id] = initialLink
+func (ms *mockStorage) CreateShortURL(shortURL *storage.ShortURL) (string, error) {
+	ms.storage[ms.id] = shortURL.InitialLink
 	defer ms.idInkrement()
 
 	return ms.id, nil
+}
+
+func (ms *mockStorage) GetAllShortURLUser(id uint32) ([]storage.ShortURLByUser, error) {
+	return nil, nil
 }
 
 // Test request execution.

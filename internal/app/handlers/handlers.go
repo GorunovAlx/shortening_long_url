@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"compress/gzip"
 	"encoding/json"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
@@ -13,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
+	gen "github.com/GorunovAlx/shortening_long_url/internal/app/generators"
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 )
 
@@ -30,79 +29,16 @@ func NewRouter(repo storage.ShortURLRepo) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Use(mGzipWriterHandle)
-	r.Use(mGzipReaderHandle)
+	r.Use(MiddlewareGzipWriterHandle)
+	r.Use(MiddlewareGzipReaderHandle)
+	r.Use(MiddlewareAuthUserHandle)
 
 	r.Get("/{shortURL}", GetInitialLinkHandler(repo))
+	r.Get("/api/user/urls", GetAllShortURLUserHandler(repo))
 	r.Post("/", CreateShortURLHandler(repo))
 	r.Post("/api/shorten", CreateShortURLJSONHandler(repo))
 
 	return r
-}
-
-//
-type gzipWriter struct {
-	http.ResponseWriter
-	Writer io.Writer
-}
-
-//
-func (w gzipWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
-}
-
-//
-func mGzipWriterHandle(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
-		if err != nil {
-			io.WriteString(w, err.Error())
-			return
-		}
-		defer gz.Close()
-
-		w.Header().Set("Content-Encoding", "gzip")
-		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
-	})
-}
-
-//
-func mGzipReaderHandle(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			next.ServeHTTP(w, r)
-			return
-		}
-		var reader io.Reader
-
-		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-			gz, err := gzip.NewReader(r.Body)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			reader = gz
-			defer gz.Close()
-		} else {
-			reader = r.Body
-		}
-
-		body := io.NopCloser(reader)
-		r.Body = body
-
-		w.Header().Set("Accept-Encoding", "gzip")
-		next.ServeHTTP(w, r)
-	})
 }
 
 // Post a json with an initial link in the request and returns a json
@@ -121,8 +57,15 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			return
 		}
 
-		shortURL, err := urlStorage.CreateShortURL(url.InitialLink)
+		token := getCookieByName("user_id", r)
+		id, err := gen.GetUserID(token)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		url.UserID = id
 
+		shortURL, err := urlStorage.CreateShortURL(&url)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -132,7 +75,6 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			ShortLink: configs.Cfg.BaseURL + "/" + shortURL,
 		}
 		resp, err := json.Marshal(res)
-
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -157,15 +99,32 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 			return
 		}
 
-		shortURL, err := urlStorage.CreateShortURL(string(b))
-		shortURL = configs.Cfg.BaseURL + "/" + shortURL
+		isURL := valid.IsURL(string(b))
+		if !isURL {
+			http.Error(w, "Incorrect link", http.StatusBadRequest)
+			return
+		}
+
+		var shortURL storage.ShortURL
+		shortURL.InitialLink = string(b)
+
+		token := getCookieByName("user_id", r)
+		id, err := gen.GetUserID(token)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		shortURL.UserID = id
+
+		shortened, err := urlStorage.CreateShortURL(&shortURL)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		shortened = configs.Cfg.BaseURL + "/" + shortened
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(shortURL))
+		w.Write([]byte(shortened))
 	}
 }
 
@@ -187,5 +146,37 @@ func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 
 		w.Header().Add("Location", link)
 		w.WriteHeader(307)
+	}
+}
+
+func GetAllShortURLUserHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := getCookieByName("user_id", r)
+		id, err := gen.GetUserID(token)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		res, err := urlStorage.GetAllShortURLUser(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if len(res) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		resp, err := json.MarshalIndent(res, "", " ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write(resp)
 	}
 }
