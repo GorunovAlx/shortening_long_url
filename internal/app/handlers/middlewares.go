@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"compress/gzip"
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -15,6 +16,12 @@ type gzipWriter struct {
 	http.ResponseWriter
 	Writer io.Writer
 }
+
+type contextKey int
+
+const (
+	contextKeyRequestID contextKey = iota
+)
 
 //
 func (w gzipWriter) Write(b []byte) (int, error) {
@@ -104,8 +111,11 @@ func MiddlewareAuthUserHandle(next http.Handler) http.Handler {
 			Path:    "/",
 			Expires: expiration,
 		}
+
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, contextKeyRequestID, userID)
 		http.SetCookie(w, &cookie)
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

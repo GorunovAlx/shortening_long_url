@@ -57,7 +57,12 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			return
 		}
 
-		token := getCookieByName("user_id", r)
+		var token string
+		if token = r.Context().Value(contextKeyRequestID).(string); len(token) == 0 {
+			http.Error(w, "cookie token user id empty", http.StatusInternalServerError)
+			return
+		}
+
 		id, err := gen.GetUserID(token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -108,7 +113,12 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		var shortURL storage.ShortURL
 		shortURL.InitialLink = string(b)
 
-		token := getCookieByName("user_id", r)
+		var token string
+		if token = r.Context().Value(contextKeyRequestID).(string); len(token) == 0 {
+			http.Error(w, "cookie token user id empty", http.StatusInternalServerError)
+			return
+		}
+
 		id, err := gen.GetUserID(token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
