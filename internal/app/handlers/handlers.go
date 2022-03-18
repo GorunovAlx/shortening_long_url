@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+
+	//"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -9,6 +12,7 @@ import (
 	valid "github.com/asaskevich/govalidator"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v4"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 	gen "github.com/GorunovAlx/shortening_long_url/internal/app/generators"
@@ -35,6 +39,7 @@ func NewRouter(repo storage.ShortURLRepo) *chi.Mux {
 
 	r.Get("/{shortURL}", GetInitialLinkHandler(repo))
 	r.Get("/api/user/urls", GetAllShortURLUserHandler(repo))
+	r.Get("/ping", GetPingToDBHandle())
 	r.Post("/", CreateShortURLHandler(repo))
 	r.Post("/api/shorten", CreateShortURLJSONHandler(repo))
 
@@ -180,5 +185,38 @@ func GetAllShortURLUserHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		w.Header().Set("Content-type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(resp)
+	}
+}
+
+const (
+	host     = "localhost"
+	port     = "5432"
+	user     = "postgres"
+	password = "barkleys"
+	dbname   = "dbgolangedu"
+)
+
+func GetPingToDBHandle() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// urlExample := "postgres://username:password@localhost:5432/database_name"
+		// dsn := "postgres://postgres:barkleys@localhost:5432/dbgolangedu"
+		//dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+		//	user, password, host, port, dbname)
+		conn, err := pgx.Connect(context.Background(), configs.Cfg.DatabaseDSN)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer conn.Close(context.Background())
+
+		e := conn.Ping(context.Background())
+
+		if e != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 	}
 }

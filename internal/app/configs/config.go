@@ -16,6 +16,7 @@ type Config struct {
 	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:":8080"`
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
+	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:""`
 	SecretKey       string `env:"SECRET_KEY" envDefault:"secret_key"`
 }
 
@@ -39,6 +40,9 @@ func SetConfig() {
 		}
 		if flag.Lookup("f") == nil {
 			flag.StringVar(&Cfg.FileStoragePath, "f", Cfg.FileStoragePath, "file storage path")
+		}
+		if flag.Lookup("d") == nil {
+			flag.StringVar(&Cfg.DatabaseDSN, "d", Cfg.DatabaseDSN, "string with connection address to db")
 		}
 		flag.Parse()
 	}
