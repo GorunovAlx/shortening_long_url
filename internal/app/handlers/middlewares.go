@@ -93,7 +93,9 @@ func MiddlewareAuthUserHandle(next http.Handler) http.Handler {
 				return
 			}
 			if isAuthentic {
-				next.ServeHTTP(w, r)
+				ctx := r.Context()
+				ctx = context.WithValue(ctx, contextKeyRequestID, userIDToken)
+				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 		}

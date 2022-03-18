@@ -178,7 +178,7 @@ func GetAllShortURLUserHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		}
 
 		w.Header().Set("Content-type", "application/json")
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusOK)
 		w.Write(resp)
 	}
 }
