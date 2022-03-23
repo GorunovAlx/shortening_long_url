@@ -3,6 +3,7 @@ package storage
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"os"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
@@ -148,4 +149,8 @@ func ScanFile(f *FileStorage, p string) (string, error) {
 	}
 
 	return "", nil
+}
+
+func (f *FileStorage) PingDB() error {
+	return errors.New("this type of storage does not support the ping operation")
 }

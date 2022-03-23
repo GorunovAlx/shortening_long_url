@@ -28,6 +28,7 @@ type ShortURLRepo interface {
 	GetInitialLink(shortLink string) (string, error)
 	CreateShortURL(shortURL *ShortURL) (string, error)
 	GetAllShortURLUser(id uint32) ([]ShortURLByUser, error)
+	PingDB() error
 }
 
 // RWShortURL contains:
@@ -37,6 +38,7 @@ type StorageOperations interface {
 	GetInitialLink(shortLink string) (string, error)
 	WriteShortURL(shortURL *ShortURL) error
 	GetAllShortURLByUser(userID uint32) ([]ShortURLByUser, error)
+	PingDB() error
 }
 
 // The ShortURLStorage contains storage that implements
@@ -50,6 +52,12 @@ type ShortURLStorage struct {
 // where the storage is initialized either by file storage
 // if the file path is not empty in the config, or by in memory storage.
 func NewStorage() *ShortURLStorage {
+	if configs.Cfg.DatabaseDSN != "" {
+		return &ShortURLStorage{
+			storage: NewDBStorage(),
+		}
+	}
+
 	if configs.Cfg.FileStoragePath != "" {
 		return &ShortURLStorage{
 			storage: NewInFileStorage(),
@@ -103,4 +111,14 @@ func (repo *ShortURLStorage) GetAllShortURLUser(id uint32) ([]ShortURLByUser, er
 	}
 
 	return result, nil
+}
+
+func (repo *ShortURLStorage) PingDB() error {
+	err := repo.storage.PingDB()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

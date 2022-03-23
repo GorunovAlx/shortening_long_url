@@ -2,57 +2,184 @@ package storage
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"time"
 
-	"github.com/jackc/pgx/v4"
+	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
+	//"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-/*
 type DBStorage struct {
 	dsn string
-
 }
 
 func NewDBStorage() *DBStorage {
-
+	return &DBStorage{
+		dsn: configs.Cfg.DatabaseDSN,
+	}
 }
 
-func (dbs *DBStorage) Ping() error {
-	return dbs.connection.Ping()
-}
-
-func(dbs *DBStorage) ConnectDB() error {
-	conn, err := pgx.Connect(context.Background(), dbs.dsn)
-	if err != nil {
+func (dbs *DBStorage) Init() error {
+	if err := dbs.CreateTable(); err != nil {
 		return err
 	}
-	defer conn.Close(context.Background())
-
+	return nil
 }
-*/
-const (
-	host     = "localhost"
-	port     = "5432"
-	user     = "postgres"
-	password = "barkleys"
-	dbname   = "dbgolangedu"
-)
 
-func TestHandle() error {
-	// urlExample := "postgres://username:password@localhost:5432/database_name"
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-		user, password, host, port, dbname)
-	conn, err := pgx.Connect(context.Background(), dsn)
+func (dbs *DBStorage) GetInitialLink(shortLink string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := dbs.connectDB()
 	if err != nil {
-		return err
+		return "", err
 	}
-	defer conn.Close(context.Background())
+	defer conn.Close()
 
-	e := conn.Ping(context.Background())
-
+	var iLink string
+	e := conn.QueryRow(
+		ctx,
+		"select initial_link from shortened_links where short_link=$1",
+		shortLink,
+	).Scan(&iLink)
 	if e != nil {
-		return e
+		return "", e
+	}
+	defer conn.Close()
+
+	return iLink, nil
+}
+
+func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := dbs.connectDB()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	var iLink string
+	e := conn.QueryRow(
+		ctx,
+		"select initial_link from shortened_links where initial_link=$1",
+		shortURL.InitialLink,
+	).Scan(&iLink)
+	if e != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if iLink == shortURL.InitialLink {
+		return nil
+	}
+
+	insertStatement := `
+	INSERT INTO shortened_links (initial_link, short_link, user_id, date_of_create)
+	VALUES ($1, $2, $3, $4)`
+
+	commandTag, err := conn.Exec(
+		context.Background(),
+		insertStatement,
+		shortURL.InitialLink,
+		shortURL.ShortLink,
+		shortURL.UserID,
+		time.Now(),
+	)
+	if err != nil {
+		return err
+	}
+	if commandTag.RowsAffected() != 1 {
+		return errors.New("No row inserted")
+	}
+	return nil
+}
+
+func (dbs *DBStorage) GetAllShortURLByUser(userID uint32) ([]ShortURLByUser, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := dbs.connectDB()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	var result []ShortURLByUser
+
+	selectStatement := "select initial_link, short_link from shortened_links where user_id=$1"
+	rows, err := conn.Query(ctx, selectStatement, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var s ShortURLByUser
+		err = rows.Scan(&s.InitialLink, &s.ShortLink)
+		if err != nil {
+			return nil, err
+		}
+		s.ShortLink = configs.Cfg.BaseURL + "/" + s.ShortLink
+		result = append(result, s)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return result, nil
+}
+
+func (dbs *DBStorage) PingDB() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	dbPool, err := pgxpool.Connect(ctx, dbs.dsn)
+	if err != nil {
+		return err
+	}
+	defer dbPool.Close()
+
+	if dbPool != nil {
+		return nil
+	}
+
+	return errors.New("Ping attempt failed")
+}
+
+func (dbs *DBStorage) CreateTable() error {
+	createTableSQL := "create table if not exists public.shortened_links" +
+		"( id integer not null constraint shortened_link_pk primary key, initial_link varchar(256) not null," +
+		"short_link varchar(256) not null, user_id integer not null, date_of_create date not null); alter table public.shortened_links owner to postgres;"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := dbs.connectDB()
+	defer conn.Close()
+
+	_, err = conn.Exec(ctx, createTableSQL)
+	if err != nil {
+		return err
 	}
 
 	return nil
+}
+
+func (dbs *DBStorage) connectDB() (*pgxpool.Pool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	config, err := pgxpool.ParseConfig(dbs.dsn)
+	if err != nil {
+		return nil, err
+	}
+	//config.Logger = log15adapter.NewLogger(log.New("module", "pgx"))
+
+	conn, err := pgxpool.ConnectConfig(ctx, config)
+
+	return conn, nil
 }

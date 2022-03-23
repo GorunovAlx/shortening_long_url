@@ -53,6 +53,10 @@ func (ms *mockStorage) GetAllShortURLUser(id uint32) ([]storage.ShortURLByUser, 
 	return nil, nil
 }
 
+func (ms *mockStorage) PingDB() error {
+	return nil
+}
+
 // Test request execution.
 func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.Response {
 	req, err := http.NewRequest(method, ts.URL+path, nil)

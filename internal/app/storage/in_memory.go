@@ -52,3 +52,7 @@ func (m *InMemoryStorage) GetAllShortURLByUser(userID uint32) ([]ShortURLByUser,
 
 	return result, nil
 }
+
+func (m *InMemoryStorage) PingDB() error {
+	return errors.New("this type of storage does not support the ping operation")
+}
