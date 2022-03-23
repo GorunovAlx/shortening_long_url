@@ -6,17 +6,19 @@ import (
 	"time"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
-	//"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type DBStorage struct {
-	dsn string
+	lastInsertId int
+	dsn          string
 }
 
 func NewDBStorage() (*DBStorage, error) {
 	storage := &DBStorage{
-		dsn: configs.Cfg.DatabaseDSN,
+		dsn:          configs.Cfg.DatabaseDSN,
+		lastInsertId: 0,
 	}
 	if err := storage.Init(); err != nil {
 		return nil, err
@@ -57,7 +59,7 @@ func (dbs *DBStorage) GetInitialLink(shortLink string) (string, error) {
 }
 
 func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	conn, err := dbs.connectDB()
@@ -72,8 +74,8 @@ func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
 		"select initial_link from shortened_links where initial_link=$1",
 		shortURL.InitialLink,
 	).Scan(&iLink)
-	if e != nil {
-		return err
+	if e != pgx.ErrNoRows {
+		return e
 	}
 	defer conn.Close()
 
@@ -82,12 +84,14 @@ func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
 	}
 
 	insertStatement := `
-	INSERT INTO shortened_links (initial_link, short_link, user_id, date_of_create)
-	VALUES ($1, $2, $3, $4)`
+	INSERT INTO shortened_links (id, initial_link, short_link, user_id, date_of_create)
+	VALUES ($1, $2, $3, $4, $5)`
 
+	dbs.lastInsertId += 1
 	commandTag, err := conn.Exec(
 		context.Background(),
 		insertStatement,
+		dbs.lastInsertId,
 		shortURL.InitialLink,
 		shortURL.ShortLink,
 		shortURL.UserID,
@@ -158,7 +162,7 @@ func (dbs *DBStorage) PingDB() error {
 func (dbs *DBStorage) CreateTable() error {
 	createTableSQL := "create table if not exists public.shortened_links" +
 		"( id integer not null constraint shortened_link_pk primary key, initial_link varchar(256) not null," +
-		"short_link varchar(256) not null, user_id integer not null, date_of_create date not null); alter table public.shortened_links owner to postgres;"
+		"short_link varchar(256) not null, user_id bigint not null, date_of_create date not null); alter table public.shortened_links owner to postgres;"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
