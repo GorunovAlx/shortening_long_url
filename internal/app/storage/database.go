@@ -14,10 +14,15 @@ type DBStorage struct {
 	dsn string
 }
 
-func NewDBStorage() *DBStorage {
-	return &DBStorage{
+func NewDBStorage() (*DBStorage, error) {
+	storage := &DBStorage{
 		dsn: configs.Cfg.DatabaseDSN,
 	}
+	if err := storage.Init(); err != nil {
+		return nil, err
+	}
+
+	return storage, nil
 }
 
 func (dbs *DBStorage) Init() error {
@@ -92,7 +97,7 @@ func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return errors.New("No row inserted")
+		return errors.New("no row inserted")
 	}
 	return nil
 }
@@ -147,7 +152,7 @@ func (dbs *DBStorage) PingDB() error {
 		return nil
 	}
 
-	return errors.New("Ping attempt failed")
+	return errors.New("ping attempt failed")
 }
 
 func (dbs *DBStorage) CreateTable() error {
@@ -159,6 +164,9 @@ func (dbs *DBStorage) CreateTable() error {
 	defer cancel()
 
 	conn, err := dbs.connectDB()
+	if err != nil {
+		return err
+	}
 	defer conn.Close()
 
 	_, err = conn.Exec(ctx, createTableSQL)
@@ -180,6 +188,9 @@ func (dbs *DBStorage) connectDB() (*pgxpool.Pool, error) {
 	//config.Logger = log15adapter.NewLogger(log.New("module", "pgx"))
 
 	conn, err := pgxpool.ConnectConfig(ctx, config)
+	if err != nil {
+		return nil, err
+	}
 
 	return conn, nil
 }

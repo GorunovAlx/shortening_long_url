@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"log"
 	"sync"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
@@ -53,8 +54,13 @@ type ShortURLStorage struct {
 // if the file path is not empty in the config, or by in memory storage.
 func NewStorage() *ShortURLStorage {
 	if configs.Cfg.DatabaseDSN != "" {
-		return &ShortURLStorage{
-			storage: NewDBStorage(),
+		st, err := NewDBStorage()
+		if err != nil {
+			log.Println(err)
+		} else {
+			return &ShortURLStorage{
+				storage: st,
+			}
 		}
 	}
 
