@@ -137,16 +137,22 @@ func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]Short
 	defer repo.s.Unlock()
 
 	var shortenedLinks []ShortURLByUser
-	for _, link := range links {
+
+	for i, link := range links {
 		shortenedURL, err := gen.GenerateShortLink(link.InitialLink)
 		if err != nil {
 			return nil, err
 		}
-		link.ShortLink = configs.Cfg.BaseURL + "/" + shortenedURL
+
+		alter(&links[i], configs.Cfg.BaseURL+"/"+shortenedURL)
+	}
+
+	for _, link := range links {
 		shortened := ShortURLByUser{
-			ShortLink:     configs.Cfg.BaseURL + "/" + shortenedURL,
+			ShortLink:     link.ShortLink,
 			CorrelationID: link.CorrelationID,
 		}
+
 		shortenedLinks = append(shortenedLinks, shortened)
 	}
 
@@ -156,4 +162,8 @@ func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]Short
 	}
 
 	return shortenedLinks, nil
+}
+
+func alter(s *ShortURLByUser, value string) {
+	(*s).ShortLink = value
 }
