@@ -18,8 +18,9 @@ type ShortURL struct {
 }
 
 type ShortURLByUser struct {
-	ShortLink   string `json:"short_url,omitempty" valid:"-"`
-	InitialLink string `json:"original_url,omitempty" valid:"-"`
+	ShortLink     string `json:"short_url,omitempty" valid:"-"`
+	InitialLink   string `json:"original_url,omitempty" valid:"-"`
+	CorrelationID string `json:"correlation_id,omitempty"`
 }
 
 // ShortURLRepo contains:
@@ -28,6 +29,7 @@ type ShortURLByUser struct {
 type ShortURLRepo interface {
 	GetInitialLink(shortLink string) (string, error)
 	CreateShortURL(shortURL *ShortURL) (string, error)
+	CreateListShortURL(links []ShortURLByUser) ([]ShortURLByUser, error)
 	GetAllShortURLUser(id uint32) ([]ShortURLByUser, error)
 	PingDB() error
 }
@@ -38,6 +40,7 @@ type ShortURLRepo interface {
 type StorageOperations interface {
 	GetInitialLink(shortLink string) (string, error)
 	WriteShortURL(shortURL *ShortURL) error
+	WriteListShortURL(links []ShortURLByUser) error
 	GetAllShortURLByUser(userID uint32) ([]ShortURLByUser, error)
 	PingDB() error
 }
@@ -127,4 +130,30 @@ func (repo *ShortURLStorage) PingDB() error {
 	}
 
 	return nil
+}
+
+func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]ShortURLByUser, error) {
+	repo.s.Lock()
+	defer repo.s.Unlock()
+
+	var shortenedLinks []ShortURLByUser
+	for _, link := range links {
+		shortenedURL, err := gen.GenerateShortLink(link.InitialLink)
+		if err != nil {
+			return nil, err
+		}
+		link.ShortLink = configs.Cfg.BaseURL + "/" + shortenedURL
+		shortened := ShortURLByUser{
+			ShortLink:     configs.Cfg.BaseURL + "/" + shortenedURL,
+			CorrelationID: link.CorrelationID,
+		}
+		shortenedLinks = append(shortenedLinks, shortened)
+	}
+
+	err := repo.storage.WriteListShortURL(links)
+	if err != nil {
+		return nil, err
+	}
+
+	return shortenedLinks, nil
 }

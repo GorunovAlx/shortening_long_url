@@ -154,3 +154,26 @@ func ScanFile(f *FileStorage, p string) (string, error) {
 func (f *FileStorage) PingDB() error {
 	return errors.New("this type of storage does not support the ping operation")
 }
+
+func (f *FileStorage) WriteListShortURL(links []ShortURLByUser) error {
+	data, err := json.Marshal(links)
+	if err != nil {
+		return err
+	}
+
+	wr, err := NewInFileWriter(f)
+	if err != nil {
+		return err
+	}
+	defer wr.Close()
+
+	if _, err := wr.writer.Write(data); err != nil {
+		return err
+	}
+
+	if err := wr.writer.WriteByte('\n'); err != nil {
+		return err
+	}
+
+	return wr.writer.Flush()
+}

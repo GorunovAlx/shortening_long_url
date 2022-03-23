@@ -56,3 +56,14 @@ func (m *InMemoryStorage) GetAllShortURLByUser(userID uint32) ([]ShortURLByUser,
 func (m *InMemoryStorage) PingDB() error {
 	return errors.New("this type of storage does not support the ping operation")
 }
+
+func (m *InMemoryStorage) WriteListShortURL(links []ShortURLByUser) error {
+	for _, link := range links {
+		var url ShortURL
+		url.InitialLink = link.InitialLink
+		url.ShortLink = link.ShortLink
+		m.storage[url.ShortLink] = url
+	}
+
+	return nil
+}

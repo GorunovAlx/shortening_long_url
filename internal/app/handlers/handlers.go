@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"io/ioutil"
 
 	"io"
 	"net/http"
@@ -39,6 +40,7 @@ func NewRouter(repo storage.ShortURLRepo) *chi.Mux {
 	r.Get("/ping", GetPingToDBHandle(repo))
 	r.Post("/", CreateShortURLHandler(repo))
 	r.Post("/api/shorten", CreateShortURLJSONHandler(repo))
+	r.Post("/api/shorten/batch", CreateListShortURLHandler(repo))
 
 	return r
 }
@@ -194,5 +196,32 @@ func GetPingToDBHandle(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func CreateListShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var links []storage.ShortURLByUser
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		json.Unmarshal(body, &links)
+
+		res, err := urlStorage.CreateListShortURL(links)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		resp, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write(resp)
 	}
 }
