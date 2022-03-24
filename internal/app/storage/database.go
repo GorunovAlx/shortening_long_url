@@ -226,7 +226,7 @@ func (dbs *DBStorage) WriteListShortURL(links []ShortURLByUser) error {
 	for _, l := range links {
 		if _, err = tx.Conn().Exec(
 			context.Background(),
-			"INSERT INTO shortened_links (initial_link, short_link, user_id, date_of_create) VALUES ($1, $2, $3, $4, $5)",
+			"INSERT INTO shortened_links (initial_link, short_link, user_id, date_of_create) VALUES ($1, $2, $3, $4)",
 			l.InitialLink,
 			l.ShortLink,
 			nil,
