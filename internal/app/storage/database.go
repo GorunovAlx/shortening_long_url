@@ -13,9 +13,8 @@ import (
 )
 
 type DBStorage struct {
-	lastInsertID int
-	dsn          string
-	Postgres     *pgxpool.Pool
+	dsn      string
+	Postgres *pgxpool.Pool
 }
 
 func NewPGXPool(ctx context.Context, dsn string, logger pgx.Logger, logLevel pgx.LogLevel) (*pgxpool.Pool, error) {
@@ -80,9 +79,8 @@ func NewDBStorage() (*DBStorage, error) {
 	}
 
 	storage := &DBStorage{
-		dsn:          configs.Cfg.DatabaseDSN,
-		lastInsertID: 0,
-		Postgres:     pgPool,
+		dsn:      configs.Cfg.DatabaseDSN,
+		Postgres: pgPool,
 	}
 	//defer pgPool.Close()
 
@@ -142,14 +140,12 @@ func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
 	}
 
 	insertStatement := `
-	INSERT INTO shortened_links (id, initial_link, short_link, user_id, date_of_create)
-	VALUES ($1, $2, $3, $4, $5)`
+	INSERT INTO shortened_links (initial_link, short_link, user_id, date_of_create)
+	VALUES ($1, $2, $3, $4)`
 
-	dbs.lastInsertID += 1
 	commandTag, err := conn.Exec(
 		context.Background(),
 		insertStatement,
-		dbs.lastInsertID,
 		shortURL.InitialLink,
 		shortURL.ShortLink,
 		shortURL.UserID,
@@ -228,11 +224,9 @@ func (dbs *DBStorage) WriteListShortURL(links []ShortURLByUser) error {
 	defer tx.Rollback(context.Background())
 
 	for _, l := range links {
-		dbs.lastInsertID += 1
 		if _, err = tx.Conn().Exec(
 			context.Background(),
-			"INSERT INTO shortened_links (id, initial_link, short_link, user_id, date_of_create) VALUES ($1, $2, $3, $4, $5)",
-			dbs.lastInsertID,
+			"INSERT INTO shortened_links (initial_link, short_link, user_id, date_of_create) VALUES ($1, $2, $3, $4, $5)",
 			l.InitialLink,
 			l.ShortLink,
 			nil,
@@ -253,7 +247,7 @@ func (dbs *DBStorage) CreateTable() error {
 	defer conn.Release()
 
 	createTableSQL := "create table if not exists public.shortened_links" +
-		"( id integer not null constraint shortened_link_pk primary key, initial_link varchar(256) not null," +
+		"( initial_link varchar(256) not null constraint shortened_link_pk primary key," +
 		"short_link varchar(256) not null, user_id bigint, date_of_create date not null); alter table public.shortened_links owner to postgres;"
 
 	_, err := conn.Exec(context.Background(), createTableSQL)
