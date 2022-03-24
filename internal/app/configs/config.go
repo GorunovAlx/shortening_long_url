@@ -18,6 +18,7 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
 	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:""`
 	SecretKey       string `env:"SECRET_KEY" envDefault:"secret_key"`
+	PgxLogLevel     string `env:"PGX_LOG_LEVEL" envDefualt:"info"`
 }
 
 var Cfg Config
@@ -46,4 +47,6 @@ func SetConfig() {
 		}
 		flag.Parse()
 	}
+
+	log.Println(Cfg)
 }

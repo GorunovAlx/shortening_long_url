@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
@@ -13,13 +15,77 @@ import (
 type DBStorage struct {
 	lastInsertID int
 	dsn          string
+	Postgres     *pgxpool.Pool
+}
+
+func NewPGXPool(ctx context.Context, dsn string, logger pgx.Logger, logLevel pgx.LogLevel) (*pgxpool.Pool, error) {
+	conf, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	conf.ConnConfig.Logger = logger
+
+	if logLevel != 0 {
+		conf.ConnConfig.LogLevel = logLevel
+	}
+
+	conf.MaxConns = 20
+	conf.MaxConns = 20
+	conf.MaxConnIdleTime = time.Second * 30
+	conf.MaxConnLifetime = time.Minute * 2
+
+	pool, err := pgxpool.ConnectConfig(ctx, conf)
+	if err != nil {
+		return nil, fmt.Errorf("pgx connection error: %w", err)
+	}
+	return pool, nil
+}
+
+// LogLevelFromEnv returns the pgx.LogLevel from the environment variable PGX_LOG_LEVEL.
+// By default this is info (pgx.LogLevelInfo), which is good for development.
+func LogLevelFromEnv() (pgx.LogLevel, error) {
+	if level := configs.Cfg.PgxLogLevel; level != "" {
+		l, err := pgx.LogLevelFromString(level)
+		if err != nil {
+			return pgx.LogLevelDebug, fmt.Errorf("pgx configuration: %w", err)
+		}
+		return l, nil
+	}
+	return pgx.LogLevelInfo, nil
+}
+
+// PGXStdLogger prints pgx logs to the standard logger.
+// os.Stderr by default.
+type PGXStdLogger struct{}
+
+func (l *PGXStdLogger) Log(ctx context.Context, level pgx.LogLevel, msg string, data map[string]interface{}) {
+	args := make([]interface{}, 0, len(data)+2) // making space for arguments + level + msg
+	args = append(args, level, msg)
+	for k, v := range data {
+		args = append(args, fmt.Sprintf("%s=%v", k, v))
+	}
+	log.Println(args...)
 }
 
 func NewDBStorage() (*DBStorage, error) {
+	pgxLogLevel, err := LogLevelFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	pgPool, err := NewPGXPool(context.Background(), configs.Cfg.DatabaseDSN, &PGXStdLogger{}, pgxLogLevel)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	storage := &DBStorage{
 		dsn:          configs.Cfg.DatabaseDSN,
 		lastInsertID: 0,
+		Postgres:     pgPool,
 	}
+	//defer pgPool.Close()
+
 	if err := storage.Init(); err != nil {
 		return nil, err
 	}
@@ -35,49 +101,41 @@ func (dbs *DBStorage) Init() error {
 }
 
 func (dbs *DBStorage) GetInitialLink(shortLink string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	conn, err := dbs.connectDB()
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-
-	var iLink string
-	e := conn.QueryRow(
-		ctx,
-		"select initial_link from shortened_links where short_link=$1",
-		shortLink,
-	).Scan(&iLink)
+	conn, e := dbs.Postgres.Acquire(context.Background())
 	if e != nil {
 		return "", e
 	}
-	defer conn.Close()
+	defer conn.Release()
+
+	var iLink string
+	err := conn.QueryRow(
+		context.Background(),
+		"select initial_link from shortened_links where short_link=$1",
+		shortLink,
+	).Scan(&iLink)
+	if err != nil {
+		return "", err
+	}
 
 	return iLink, nil
 }
 
 func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	conn, err := dbs.connectDB()
-	if err != nil {
-		return err
+	conn, e := dbs.Postgres.Acquire(context.Background())
+	if e != nil {
+		return e
 	}
-	defer conn.Close()
+	defer conn.Release()
 
 	var iLink string
-	e := conn.QueryRow(
-		ctx,
+	err := conn.QueryRow(
+		context.Background(),
 		"select initial_link from shortened_links where initial_link=$1",
 		shortURL.InitialLink,
 	).Scan(&iLink)
-	if e != pgx.ErrNoRows {
-		return e
+	if err != pgx.ErrNoRows {
+		return err
 	}
-	defer conn.Close()
 
 	if iLink == shortURL.InitialLink {
 		return nil
@@ -107,19 +165,16 @@ func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
 }
 
 func (dbs *DBStorage) GetAllShortURLByUser(userID uint32) ([]ShortURLByUser, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	conn, err := dbs.connectDB()
-	if err != nil {
-		return nil, err
+	conn, e := dbs.Postgres.Acquire(context.Background())
+	if e != nil {
+		return nil, e
 	}
-	defer conn.Close()
+	defer conn.Release()
 
 	var result []ShortURLByUser
 
 	selectStatement := "select initial_link, short_link from shortened_links where user_id=$1"
-	rows, err := conn.Query(ctx, selectStatement, userID)
+	rows, err := conn.Query(context.Background(), selectStatement, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -160,25 +215,22 @@ func (dbs *DBStorage) PingDB() error {
 }
 
 func (dbs *DBStorage) WriteListShortURL(links []ShortURLByUser) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+	conn, e := dbs.Postgres.Acquire(context.Background())
+	if e != nil {
+		return e
+	}
+	defer conn.Release()
 
-	conn, err := dbs.connectDB()
+	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
-
-	tx, err := conn.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback(context.Background())
 
 	for _, l := range links {
 		dbs.lastInsertID += 1
 		if _, err = tx.Conn().Exec(
-			ctx,
+			context.Background(),
 			"INSERT INTO shortened_links (id, initial_link, short_link, user_id, date_of_create) VALUES ($1, $2, $3, $4, $5)",
 			dbs.lastInsertID,
 			l.InitialLink,
@@ -190,45 +242,24 @@ func (dbs *DBStorage) WriteListShortURL(links []ShortURLByUser) error {
 		}
 	}
 
-	return tx.Commit(ctx)
+	return tx.Commit(context.Background())
 }
 
 func (dbs *DBStorage) CreateTable() error {
+	conn, e := dbs.Postgres.Acquire(context.Background())
+	if e != nil {
+		return e
+	}
+	defer conn.Release()
+
 	createTableSQL := "create table if not exists public.shortened_links" +
 		"( id integer not null constraint shortened_link_pk primary key, initial_link varchar(256) not null," +
 		"short_link varchar(256) not null, user_id bigint, date_of_create date not null); alter table public.shortened_links owner to postgres;"
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	conn, err := dbs.connectDB()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	_, err = conn.Exec(ctx, createTableSQL)
+	_, err := conn.Exec(context.Background(), createTableSQL)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (dbs *DBStorage) connectDB() (*pgxpool.Pool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	config, err := pgxpool.ParseConfig(dbs.dsn)
-	if err != nil {
-		return nil, err
-	}
-	//config.Logger = log15adapter.NewLogger(log.New("module", "pgx"))
-
-	conn, err := pgxpool.ConnectConfig(ctx, config)
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, nil
 }
