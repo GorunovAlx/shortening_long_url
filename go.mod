@@ -10,6 +10,8 @@ replace github.com/GorunovAlx/shortening_long_url/internal/app/configs => ../int
 
 replace github.com/GorunovAlx/shortening_long_url/internal/app/generators => ../internal/app/generators
 
+replace github.com/GorunovAlx/shortening_long_url/internal/app/utils => ../internal/app/utils
+
 require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/caarlos0/env/v6 v6.9.1

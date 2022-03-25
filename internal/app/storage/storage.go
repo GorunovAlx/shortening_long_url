@@ -7,6 +7,7 @@ import (
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 	gen "github.com/GorunovAlx/shortening_long_url/internal/app/generators"
+	"github.com/GorunovAlx/shortening_long_url/internal/app/utils"
 )
 
 // ShortURL struct contains a InitialLink - initial link
@@ -103,7 +104,10 @@ func (repo *ShortURLStorage) CreateShortURL(shortURL *ShortURL) (string, error) 
 
 	shortURL.ShortLink = shortenedURL
 	err := repo.storage.WriteShortURL(shortURL)
-	if err != nil {
+
+	if errors.Is(err, utils.ErrUniqueLink) {
+		return shortURL.ShortLink, utils.ErrUniqueLink
+	} else if err != nil {
 		return "", errors.New(err.Error())
 	}
 

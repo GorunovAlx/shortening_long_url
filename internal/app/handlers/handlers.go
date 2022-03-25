@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 
 	"io"
@@ -15,6 +16,7 @@ import (
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 	gen "github.com/GorunovAlx/shortening_long_url/internal/app/generators"
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
+	"github.com/GorunovAlx/shortening_long_url/internal/app/utils"
 )
 
 // Returns a pointer to a chi.Mux with endpoints:
@@ -71,16 +73,21 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		url.UserID = id
 
 		shortURL, err := urlStorage.CreateShortURL(&url)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
 		res := storage.ShortURL{
 			ShortLink: configs.Cfg.BaseURL + "/" + shortURL,
 		}
 		resp, err := json.Marshal(res)
 		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if errors.Is(err, utils.ErrUniqueLink) {
+			w.Header().Set("Content-type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			w.Write(resp)
+			return
+		} else if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -123,11 +130,16 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		shortURL.UserID = id
 
 		shortened, err := urlStorage.CreateShortURL(&shortURL)
-		if err != nil {
+		shortened = configs.Cfg.BaseURL + "/" + shortened
+
+		if errors.Is(err, utils.ErrUniqueLink) {
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(shortened))
+			return
+		} else if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		shortened = configs.Cfg.BaseURL + "/" + shortened
 
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortened))

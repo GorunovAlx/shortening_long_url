@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
+	"github.com/GorunovAlx/shortening_long_url/internal/app/utils"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	//"github.com/jackc/pgerrcode"
 )
 
 type DBStorage struct {
@@ -126,23 +128,9 @@ func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
 	}
 	defer conn.Release()
 
-	var iLink string
-	err := conn.QueryRow(
-		context.Background(),
-		"select initial_link from shortened_links where initial_link=$1",
-		shortURL.InitialLink,
-	).Scan(&iLink)
-	if err != pgx.ErrNoRows {
-		return err
-	}
-
-	if iLink == shortURL.InitialLink {
-		return nil
-	}
-
 	insertStatement := `
 	INSERT INTO shortened_links (initial_link, short_link, user_id, date_of_create)
-	VALUES ($1, $2, $3, $4)`
+	VALUES ($1, $2, $3, $4) ON CONFLICT (initial_link) DO NOTHING;`
 
 	commandTag, err := conn.Exec(
 		context.Background(),
@@ -152,11 +140,13 @@ func (dbs *DBStorage) WriteShortURL(shortURL *ShortURL) error {
 		shortURL.UserID,
 		time.Now(),
 	)
+
 	if err != nil {
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return errors.New("no row inserted")
+		err = utils.NewInsertUniqueLinkError(shortURL.InitialLink)
+		return err
 	}
 	return nil
 }
@@ -247,14 +237,22 @@ func (dbs *DBStorage) CreateTable() error {
 	}
 	defer conn.Release()
 
-	createTableSQL := "create table if not exists public.shortened_links" +
-		"( initial_link varchar(256) not null constraint shortened_link_pk primary key," +
-		"short_link varchar(256) not null, user_id bigint, date_of_create date not null); alter table public.shortened_links owner to postgres;"
+	sqlCreateStmt := `
+	create table if not exists public.shortened_links ( id bigserial constraint shortened_link_pk primary key,
+	initial_link varchar(256) not null unique, short_link varchar(256) not null, user_id bigint,
+	date_of_create date ); alter table public.shortened_links owner to postgres;`
 
-	_, err := conn.Exec(context.Background(), createTableSQL)
+	_, err := conn.Exec(context.Background(), sqlCreateStmt)
 	if err != nil {
 		return err
 	}
+
+	//createUniqueIndex := "CREATE UNIQUE INDEX idx_shortened_links_initial_link ON public.shortened_links(initial_link);"
+	//
+	//_, err = conn.Exec(context.Background(), createUniqueIndex)
+	//if err != nil {
+	//	return err
+	//}
 
 	return nil
 }
