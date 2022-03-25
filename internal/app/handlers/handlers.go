@@ -73,22 +73,31 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		url.UserID = id
 
 		shortURL, err := urlStorage.CreateShortURL(&url)
+		if errors.Is(err, utils.ErrUniqueLink) {
+			resp, e := json.Marshal(storage.ShortURL{
+				ShortLink: configs.Cfg.BaseURL + "/" + shortURL,
+			})
+			if e != nil {
+				http.Error(w, e.Error(), http.StatusBadRequest)
+				return
+			}
+			w.Header().Set("Content-type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			w.Write(resp)
+			return
+		}
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		res := storage.ShortURL{
 			ShortLink: configs.Cfg.BaseURL + "/" + shortURL,
 		}
 		resp, e := json.Marshal(res)
 		if e != nil {
 			http.Error(w, e.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if errors.Is(err, utils.ErrUniqueLink) {
-			w.Header().Set("Content-type", "application/json")
-			w.WriteHeader(http.StatusConflict)
-			w.Write(resp)
-			return
-		} else if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
