@@ -12,12 +12,16 @@ replace github.com/GorunovAlx/shortening_long_url/internal/app/generators => ../
 
 replace github.com/GorunovAlx/shortening_long_url/internal/app/utils => ../internal/app/utils
 
+replace github.com/GorunovAlx/shortening_long_url/internal/app/mocks => ../internal/app/mocks
+
 require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/caarlos0/env/v6 v6.9.1
 	github.com/go-chi/chi/v5 v5.0.7
+	github.com/golang/mock v1.6.0
 	github.com/itchyny/base58-go v0.2.0
 	github.com/jackc/pgx/v4 v4.15.0
+	github.com/rs/zerolog v1.26.1
 	github.com/stretchr/testify v1.7.0
 )
 
@@ -32,7 +36,7 @@ require (
 	github.com/jackc/pgtype v1.10.0 // indirect
 	github.com/jackc/puddle v1.2.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
-	golang.org/x/text v0.3.6 // indirect
+	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e // indirect
+	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )

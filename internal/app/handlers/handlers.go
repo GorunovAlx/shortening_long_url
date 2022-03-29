@@ -73,23 +73,16 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		url.UserID = id
 
 		shortURL, err := urlStorage.CreateShortURL(&url)
-		if errors.Is(err, utils.ErrUniqueLink) {
-			resp, e := json.Marshal(storage.ShortURL{
-				ShortLink: configs.Cfg.BaseURL + "/" + shortURL,
-			})
-			if e != nil {
-				http.Error(w, e.Error(), http.StatusBadRequest)
-				return
-			}
-			w.Header().Set("Content-type", "application/json")
-			w.WriteHeader(http.StatusConflict)
-			w.Write(resp)
+		if err != nil && err != utils.ErrUniqueLink {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+		w.Header().Set("Content-type", "application/json")
+		if errors.Is(err, utils.ErrUniqueLink) {
+			w.WriteHeader(http.StatusConflict)
+		} else {
+			w.WriteHeader(http.StatusCreated)
 		}
 
 		res := storage.ShortURL{
@@ -101,8 +94,6 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			return
 		}
 
-		w.Header().Set("Content-type", "application/json")
-		w.WriteHeader(http.StatusCreated)
 		w.Write(resp)
 	}
 }
@@ -139,18 +130,18 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		shortURL.UserID = id
 
 		shortened, err := urlStorage.CreateShortURL(&shortURL)
+		if err != nil && err != utils.ErrUniqueLink {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		shortened = configs.Cfg.BaseURL + "/" + shortened
 
 		if errors.Is(err, utils.ErrUniqueLink) {
 			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte(shortened))
-			return
-		} else if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+		} else {
+			w.WriteHeader(http.StatusCreated)
 		}
 
-		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortened))
 	}
 }
@@ -179,6 +170,9 @@ func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 func GetAllShortURLUserHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := getCookieByName("user_id", r)
+		if token == "" {
+			token = r.Context().Value(contextKeyRequestID).(string)
+		}
 		id, err := gen.GetUserID(token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

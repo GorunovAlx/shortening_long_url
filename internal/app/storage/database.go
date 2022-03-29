@@ -11,7 +11,6 @@ import (
 	"github.com/GorunovAlx/shortening_long_url/internal/app/utils"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	//"github.com/jackc/pgerrcode"
 )
 
 type DBStorage struct {
@@ -84,7 +83,6 @@ func NewDBStorage() (*DBStorage, error) {
 		dsn:      configs.Cfg.DatabaseDSN,
 		Postgres: pgPool,
 	}
-	//defer pgPool.Close()
 
 	if err := storage.Init(); err != nil {
 		return nil, err

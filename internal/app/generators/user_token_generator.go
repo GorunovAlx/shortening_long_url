@@ -10,7 +10,6 @@ import (
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 )
 
-// Using!
 func generateRandom(size int) ([]byte, error) {
 	b := make([]byte, size)
 	_, err := rand.Read(b)
@@ -21,7 +20,6 @@ func generateRandom(size int) ([]byte, error) {
 	return b, nil
 }
 
-//Using!
 func GenerateUserIDToken() (string, error) {
 	id, err := generateRandom(4)
 	if err != nil {

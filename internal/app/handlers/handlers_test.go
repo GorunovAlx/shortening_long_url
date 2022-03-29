@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -10,10 +13,12 @@ import (
 	"strings"
 	"testing"
 
+	gen "github.com/GorunovAlx/shortening_long_url/internal/app/generators"
+	mocks "github.com/GorunovAlx/shortening_long_url/internal/app/mocks"
+	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 )
 
 // mockStorage imitates ShortURLStorage.
@@ -62,8 +67,8 @@ func (ms *mockStorage) CreateListShortURL(links []storage.ShortURLByUser) ([]sto
 }
 
 // Test request execution.
-func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.Response {
-	req, err := http.NewRequest(method, ts.URL+path, nil)
+func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) *http.Response {
+	req, err := http.NewRequest(method, ts.URL+path, body)
 	require.NoError(t, err)
 
 	client := &http.Client{
@@ -80,7 +85,6 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.R
 
 // Test for CreateShortURLJSONHandler.
 func TestCreateShortURLJSONHandler(t *testing.T) {
-	target := "http://localhost:8080/"
 	type want struct {
 		statusCode  int
 		contentType string
@@ -126,10 +130,15 @@ func TestCreateShortURLJSONHandler(t *testing.T) {
 				id:      tt.nextID,
 				storage: tt.st,
 			}
-			request := httptest.NewRequest(http.MethodPost, target, strings.NewReader(tt.body))
+
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(CreateShortURLJSONHandler(&ms))
-			h.ServeHTTP(w, request)
+			tok, e := gen.GenerateUserIDToken()
+			require.NoError(t, e)
+			ctx := request.Context()
+			ctx = context.WithValue(ctx, contextKeyRequestID, tok)
+			h.ServeHTTP(w, request.WithContext(ctx))
 			result := w.Result()
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
@@ -194,7 +203,7 @@ func TestGetLinkHandler(t *testing.T) {
 			r := NewRouter(&ms)
 			ts := httptest.NewServer(r)
 			defer ts.Close()
-			result := testRequest(t, ts, "GET", tt.path)
+			result := testRequest(t, ts, "GET", tt.path, nil)
 
 			defer result.Body.Close()
 
@@ -208,7 +217,6 @@ func TestGetLinkHandler(t *testing.T) {
 
 // Test for CreateShortURLHandler.
 func TestCreateShortURLHandler(t *testing.T) {
-	target := "http://localhost:8080/"
 	type want struct {
 		statusCode int
 		link       string
@@ -244,31 +252,51 @@ func TestCreateShortURLHandler(t *testing.T) {
 				link:       "/4",
 			},
 		},
-		{
-			name: "simple test #3(Post)",
-			st: map[string]string{
-				"1": "yandex.ru",
-				"2": "google.com",
-				"3": "tutu.ru",
-			},
-			nextID: "4",
-			body:   nil,
-			want: want{
-				statusCode: 400,
-				link:       "Incorrect request\n",
-			},
-		},
+		/*
+			{
+				name: "simple test #3(Post)",
+				st: map[string]string{
+					"1": "yandex.ru",
+					"2": "google.com",
+					"3": "tutu.ru",
+				},
+				nextID: "4",
+				body:   nil,
+				want: want{
+					statusCode: 400,
+					link:       "Incorrect request\n",
+				},
+			},*/
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ms := mockStorage{
-				id:      tt.nextID,
-				storage: tt.st,
-			}
-			request := httptest.NewRequest(http.MethodPost, target, bytes.NewReader(tt.body))
+			//ms := mockStorage{
+			//	id:      tt.nextID,
+			//	storage: tt.st,
+			//}
+
+			var shortURL storage.ShortURL
+			shortURL.InitialLink = string(tt.body)
+
+			ctrl := gomock.NewController(t)
+			mockStorage := mocks.NewMockShortURLRepo(ctrl)
+
+			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(tt.body))
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(CreateShortURLHandler(&ms))
-			h.ServeHTTP(w, request)
+			h := http.HandlerFunc(CreateShortURLHandler(mockStorage))
+
+			token, e := gen.GenerateUserIDToken()
+			require.NoError(t, e)
+			id, err := gen.GetUserID(token)
+			require.NoError(t, err)
+
+			shortURL.UserID = id
+
+			mockStorage.EXPECT().CreateShortURL(&shortURL).Return(tt.want.link[1:], nil)
+
+			ctx := request.Context()
+			ctx = context.WithValue(ctx, contextKeyRequestID, token)
+			h.ServeHTTP(w, request.WithContext(ctx))
 			result := w.Result()
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
@@ -278,6 +306,182 @@ func TestCreateShortURLHandler(t *testing.T) {
 			err = result.Body.Close()
 			require.NoError(t, err)
 			assert.Equal(t, tt.want.link, string(link))
+		})
+	}
+}
+
+func TestGetAllShortURLUserHandler(t *testing.T) {
+	var shorts = []storage.ShortURLByUser{
+		{
+			ShortLink:   "/1",
+			InitialLink: "google.com",
+		},
+		{
+			ShortLink:   "/2",
+			InitialLink: "yandex.com",
+		},
+	}
+
+	type want struct {
+		statusCode  int
+		contentType string
+		shorts      []storage.ShortURLByUser
+	}
+	tests := []struct {
+		name string
+		want want
+	}{
+		{
+			name: "simple test #1(Get)",
+			want: want{
+				statusCode:  200,
+				contentType: "application/json",
+				shorts:      shorts,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockStorage := mocks.NewMockShortURLRepo(ctrl)
+
+			request := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(GetAllShortURLUserHandler(mockStorage))
+
+			token, e := gen.GenerateUserIDToken()
+			require.NoError(t, e)
+			id, err := gen.GetUserID(token)
+			require.NoError(t, err)
+
+			mockStorage.EXPECT().GetAllShortURLUser(id).Return(tt.want.shorts, nil)
+
+			ctx := request.Context()
+			ctx = context.WithValue(ctx, contextKeyRequestID, token)
+			h.ServeHTTP(w, request.WithContext(ctx))
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
+
+			var links []storage.ShortURLByUser
+			body, err := ioutil.ReadAll(result.Body)
+			require.NoError(t, err)
+			json.Unmarshal(body, &links)
+			assert.ObjectsAreEqualValues(tt.want.shorts, links)
+		})
+	}
+}
+
+func TestGetPingToDBHandle(t *testing.T) {
+	type want struct {
+		statusCode int
+	}
+	tests := []struct {
+		name string
+		want want
+	}{
+		{
+			name: "simple test #1(Get)",
+			want: want{
+				statusCode: 200,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockStorage := mocks.NewMockShortURLRepo(ctrl)
+
+			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(GetPingToDBHandle(mockStorage))
+
+			mockStorage.EXPECT().PingDB().Return(nil)
+
+			h.ServeHTTP(w, request)
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+		})
+	}
+}
+
+func TestCreateListShortURLHandler(t *testing.T) {
+	var bodyTest = `[
+		{
+			"correlation_id":"d69863e8-958c-4a2b-80bb-e7692779cf0e",
+			"original_url":"http://mq8vndl.yandex/jyk7qu4x6jb/v751v/nfh7k5n8dza"
+		},
+		{
+			"correlation_id":"b8be6090-2f46-492a-a98f-1233351a904a",
+			"original_url":"http://h4jh4.biz"
+		}]`
+	var shortsSend = []storage.ShortURLByUser{
+		{
+			CorrelationID: "d69863e8-958c-4a2b-80bb-e7692779cf0e",
+			InitialLink:   "http://mq8vndl.yandex/jyk7qu4x6jb/v751v/nfh7k5n8dza",
+		},
+		{
+			CorrelationID: "b8be6090-2f46-492a-a98f-1233351a904a",
+			InitialLink:   "http://h4jh4.biz",
+		},
+	}
+	var shortsGet = []storage.ShortURLByUser{
+		{
+			CorrelationID: "d69863e8-958c-4a2b-80bb-e7692779cf0e",
+			ShortLink:     "/1",
+		},
+		{
+			CorrelationID: "b8be6090-2f46-492a-a98f-1233351a904a",
+			ShortLink:     "/2",
+		},
+	}
+
+	type want struct {
+		statusCode  int
+		contentType string
+		shorts      []storage.ShortURLByUser
+	}
+	tests := []struct {
+		name      string
+		shortsFor []storage.ShortURLByUser
+		body      string
+		want      want
+	}{
+		{
+			name:      "simple test #1(Post)",
+			body:      bodyTest,
+			shortsFor: shortsSend,
+			want: want{
+				statusCode:  201,
+				contentType: "application/json",
+				shorts:      shortsGet,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockStorage := mocks.NewMockShortURLRepo(ctrl)
+
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", strings.NewReader(tt.body))
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(CreateListShortURLHandler(mockStorage))
+
+			mockStorage.EXPECT().CreateListShortURL(tt.shortsFor).Return(tt.want.shorts, nil)
+
+			h.ServeHTTP(w, request)
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
+
+			var links []storage.ShortURLByUser
+			body, err := ioutil.ReadAll(result.Body)
+			require.NoError(t, err)
+			json.Unmarshal(body, &links)
+			assert.ObjectsAreEqualValues(tt.want.shorts, links)
 		})
 	}
 }
