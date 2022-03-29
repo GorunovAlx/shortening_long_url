@@ -369,6 +369,8 @@ func TestGetAllShortURLUserHandler(t *testing.T) {
 			require.NoError(t, err)
 			json.Unmarshal(body, &links)
 			assert.ObjectsAreEqualValues(tt.want.shorts, links)
+			err = result.Body.Close()
+			require.NoError(t, err)
 		})
 	}
 }
@@ -403,6 +405,8 @@ func TestGetPingToDBHandle(t *testing.T) {
 			result := w.Result()
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			err := result.Body.Close()
+			require.NoError(t, err)
 		})
 	}
 }
@@ -479,6 +483,8 @@ func TestCreateListShortURLHandler(t *testing.T) {
 
 			var links []storage.ShortURLByUser
 			body, err := ioutil.ReadAll(result.Body)
+			require.NoError(t, err)
+			err = result.Body.Close()
 			require.NoError(t, err)
 			json.Unmarshal(body, &links)
 			assert.ObjectsAreEqualValues(tt.want.shorts, links)
