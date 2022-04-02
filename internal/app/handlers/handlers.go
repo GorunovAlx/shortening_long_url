@@ -13,7 +13,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
 	gen "github.com/GorunovAlx/shortening_long_url/internal/app/generators"
 	"github.com/GorunovAlx/shortening_long_url/internal/app/storage"
 	"github.com/GorunovAlx/shortening_long_url/internal/app/utils"
@@ -64,7 +63,6 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		}
 
 		token := r.Context().Value(contextKeyRequestID).(string)
-
 		id, err := gen.GetUserID(token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -86,7 +84,7 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		}
 
 		res := storage.ShortURL{
-			ShortLink: configs.Cfg.BaseURL + "/" + shortURL,
+			ShortLink: shortURL,
 		}
 		resp, e := json.Marshal(res)
 		if e != nil {
@@ -102,11 +100,7 @@ func CreateShortURLJSONHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		b, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if len(b) == 0 {
+		if err != nil || len(b) == 0 {
 			http.Error(w, "Incorrect request", http.StatusBadRequest)
 			return
 		}
@@ -117,24 +111,23 @@ func CreateShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 			return
 		}
 
-		var shortURL storage.ShortURL
-		shortURL.InitialLink = string(b)
-
 		token := r.Context().Value(contextKeyRequestID).(string)
-
 		id, err := gen.GetUserID(token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		shortURL.UserID = id
+
+		shortURL := storage.ShortURL{
+			InitialLink: string(b),
+			UserID:      id,
+		}
 
 		shortened, err := urlStorage.CreateShortURL(&shortURL)
 		if err != nil && err != utils.ErrUniqueLink {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		shortened = configs.Cfg.BaseURL + "/" + shortened
 
 		if errors.Is(err, utils.ErrUniqueLink) {
 			w.WriteHeader(http.StatusConflict)
@@ -222,7 +215,12 @@ func CreateListShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		json.Unmarshal(body, &links)
+
+		err = json.Unmarshal(body, &links)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		res, err := urlStorage.CreateListShortURL(links)
 		if err != nil {

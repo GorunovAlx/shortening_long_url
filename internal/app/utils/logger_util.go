@@ -12,7 +12,7 @@ import (
 var Logger zerolog.Logger
 
 func LoggerInit() {
-	logfile, err := os.OpenFile("server.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logfile, err := os.OpenFile("server_logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal().Err(err).Msgf("Cannot start %v", logfile)
 	}

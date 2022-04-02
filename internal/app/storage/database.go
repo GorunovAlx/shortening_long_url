@@ -31,7 +31,6 @@ func NewPGXPool(ctx context.Context, dsn string, logger pgx.Logger, logLevel pgx
 	}
 
 	conf.MaxConns = 20
-	conf.MaxConns = 20
 	conf.MaxConnIdleTime = time.Second * 30
 	conf.MaxConnLifetime = time.Minute * 2
 
@@ -244,13 +243,6 @@ func (dbs *DBStorage) CreateTable() error {
 	if err != nil {
 		return err
 	}
-
-	//createUniqueIndex := "CREATE UNIQUE INDEX idx_shortened_links_initial_link ON public.shortened_links(initial_link);"
-	//
-	//_, err = conn.Exec(context.Background(), createUniqueIndex)
-	//if err != nil {
-	//	return err
-	//}
 
 	return nil
 }

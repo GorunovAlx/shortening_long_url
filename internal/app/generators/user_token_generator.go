@@ -20,6 +20,7 @@ func generateRandom(size int) ([]byte, error) {
 	return b, nil
 }
 
+// Generate a token.
 func GenerateUserIDToken() (string, error) {
 	id, err := generateRandom(4)
 	if err != nil {
@@ -33,6 +34,7 @@ func GenerateUserIDToken() (string, error) {
 	return signedID, nil
 }
 
+// Authenticate user token id.
 func AuthUserIDToken(userIDToken string) (bool, error) {
 	data, err := hex.DecodeString(userIDToken)
 	if err != nil {

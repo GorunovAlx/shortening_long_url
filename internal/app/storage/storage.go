@@ -86,7 +86,7 @@ func (repo *ShortURLStorage) GetInitialLink(shortLink string) (string, error) {
 
 	url, err := repo.storage.GetInitialLink(shortLink)
 	if err != nil {
-		return "", errors.New(err.Error())
+		return "", err
 	}
 
 	return url, nil
@@ -97,18 +97,18 @@ func (repo *ShortURLStorage) CreateShortURL(shortURL *ShortURL) (string, error) 
 	repo.s.Lock()
 	defer repo.s.Unlock()
 
-	shortenedURL, e := gen.GenerateShortLink(shortURL.InitialLink)
-	if e != nil {
-		return "", errors.New(e.Error())
+	shortenedURL, err := gen.GenerateShortLink(shortURL.InitialLink, shortURL.UserID)
+	if err != nil {
+		return "", err
 	}
+	shortURL.ShortLink = configs.Cfg.BaseURL + "/" + shortenedURL
 
-	shortURL.ShortLink = shortenedURL
-	err := repo.storage.WriteShortURL(shortURL)
+	err = repo.storage.WriteShortURL(shortURL)
 
 	if errors.Is(err, utils.ErrUniqueLink) {
 		return shortURL.ShortLink, utils.ErrUniqueLink
 	} else if err != nil {
-		return "", errors.New(err.Error())
+		return "", err
 	}
 
 	return shortURL.ShortLink, nil
@@ -143,12 +143,13 @@ func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]Short
 	var shortenedLinks []ShortURLByUser
 
 	for i, link := range links {
-		shortenedURL, err := gen.GenerateShortLink(link.InitialLink)
+		shortenedURL, err := gen.GenerateShortLink(link.InitialLink, 0)
 		if err != nil {
 			return nil, err
 		}
+		shortenedURL = configs.Cfg.BaseURL + "/" + shortenedURL
 
-		alter(&links[i], configs.Cfg.BaseURL+"/"+shortenedURL)
+		links[i].setShortLink(shortenedURL)
 	}
 
 	for _, link := range links {
@@ -168,6 +169,6 @@ func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]Short
 	return shortenedLinks, nil
 }
 
-func alter(s *ShortURLByUser, value string) {
+func (s *ShortURLByUser) setShortLink(value string) {
 	(*s).ShortLink = value
 }

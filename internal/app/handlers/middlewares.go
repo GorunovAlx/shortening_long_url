@@ -11,7 +11,6 @@ import (
 	gen "github.com/GorunovAlx/shortening_long_url/internal/app/generators"
 )
 
-//
 type gzipWriter struct {
 	http.ResponseWriter
 	Writer io.Writer
@@ -23,12 +22,11 @@ const (
 	contextKeyRequestID contextKey = iota
 )
 
-//
 func (w gzipWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
-//
+// Give a compressed response to a client that supports compressed response processing.
 func MiddlewareGzipWriterHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -53,7 +51,7 @@ func MiddlewareGzipWriterHandle(next http.Handler) http.Handler {
 	})
 }
 
-//
+// Accept requests in compressed format.
 func MiddlewareGzipReaderHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -82,6 +80,9 @@ func MiddlewareGzipReaderHandle(next http.Handler) http.Handler {
 	})
 }
 
+// MiddlewareAuthUserHandle checks if the user's id cookie came in and if so,
+// checks for authentication. If the cookie is empty,
+// it creates a new user id cookie, sets it and passes it on.
 func MiddlewareAuthUserHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userIDToken := getCookieByName("user_id", r)
@@ -100,7 +101,7 @@ func MiddlewareAuthUserHandle(next http.Handler) http.Handler {
 			}
 		}
 
-		userID, err := gen.GenerateUserIDToken()
+		userIDToken, err := gen.GenerateUserIDToken()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -109,13 +110,13 @@ func MiddlewareAuthUserHandle(next http.Handler) http.Handler {
 		expiration := time.Now().Add(365 * 24 * time.Hour)
 		cookie := http.Cookie{
 			Name:    "user_id",
-			Value:   userID,
+			Value:   userIDToken,
 			Path:    "/",
 			Expires: expiration,
 		}
 
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, contextKeyRequestID, userID)
+		ctx = context.WithValue(ctx, contextKeyRequestID, userIDToken)
 		http.SetCookie(w, &cookie)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -123,14 +124,14 @@ func MiddlewareAuthUserHandle(next http.Handler) http.Handler {
 
 func getCookieByName(cName string, r *http.Request) string {
 	receivedCookie := r.Cookies()
-	var userIDToken string
+	var value string
 	if len(receivedCookie) != 0 {
 		for _, cookie := range receivedCookie {
 			if cookie.Name == cName {
-				userIDToken = cookie.Value
+				value = cookie.Value
 			}
 		}
 	}
 
-	return userIDToken
+	return value
 }
