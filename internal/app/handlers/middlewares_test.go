@@ -28,6 +28,8 @@ func TestMiddlewareGzipWriterHandle(t *testing.T) {
 	result := w.Result()
 
 	assert.Equal(t, "gzip", result.Header.Get("Content-Encoding"))
+	err := result.Body.Close()
+	require.NoError(t, err)
 }
 
 func TestMiddlewareGzipReaderHandle(t *testing.T) {
@@ -48,6 +50,8 @@ func TestMiddlewareGzipReaderHandle(t *testing.T) {
 	result := w.Result()
 
 	assert.Equal(t, "gzip", result.Header.Get("Accept-Encoding"))
+	err = result.Body.Close()
+	require.NoError(t, err)
 }
 
 func TestMiddlewareAuthUserHandle(t *testing.T) {
@@ -70,7 +74,8 @@ func TestMiddlewareAuthUserHandle(t *testing.T) {
 
 	assert.Equal(t, 200, result.StatusCode)
 	assert.NotEqual(t, "", result.Header.Get("Set-Cookie"))
-
+	err := result.Body.Close()
+	require.NoError(t, err)
 }
 
 func compress(data []byte) ([]byte, error) {

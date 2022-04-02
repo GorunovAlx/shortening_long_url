@@ -101,7 +101,7 @@ func (repo *ShortURLStorage) CreateShortURL(shortURL *ShortURL) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	shortURL.ShortLink = configs.Cfg.BaseURL + "/" + shortenedURL
+	shortURL.ShortLink = shortenedURL
 
 	err = repo.storage.WriteShortURL(shortURL)
 
