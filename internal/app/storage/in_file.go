@@ -3,6 +3,7 @@ package storage
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"os"
 
 	"github.com/GorunovAlx/shortening_long_url/internal/app/configs"
@@ -101,6 +102,33 @@ func (f *FileStorage) GetInitialLink(shortLink string) (string, error) {
 	return ScanFile(f, shortLink)
 }
 
+func (f *FileStorage) GetAllShortURLByUser(userID uint32) ([]ShortURLByUser, error) {
+	sc, err := NewInFileScanner(f)
+	if err != nil {
+		return nil, err
+	}
+	defer sc.Close()
+
+	var result []ShortURLByUser
+	for sc.scanner.Scan() {
+		data := sc.scanner.Bytes()
+		shortURL := ShortURL{}
+		err := json.Unmarshal(data, &shortURL)
+		if err != nil {
+			return nil, err
+		}
+		if shortURL.UserID == userID {
+			byUser := ShortURLByUser{
+				InitialLink: shortURL.InitialLink,
+				ShortLink:   configs.Cfg.BaseURL + "/" + shortURL.ShortLink,
+			}
+			result = append(result, byUser)
+		}
+	}
+
+	return result, nil
+}
+
 func ScanFile(f *FileStorage, p string) (string, error) {
 	sc, err := NewInFileScanner(f)
 	if err != nil {
@@ -121,4 +149,31 @@ func ScanFile(f *FileStorage, p string) (string, error) {
 	}
 
 	return "", nil
+}
+
+func (f *FileStorage) PingDB() error {
+	return errors.New("this type of storage does not support the ping operation")
+}
+
+func (f *FileStorage) WriteListShortURL(links []ShortURLByUser) error {
+	data, err := json.Marshal(links)
+	if err != nil {
+		return err
+	}
+
+	wr, err := NewInFileWriter(f)
+	if err != nil {
+		return err
+	}
+	defer wr.Close()
+
+	if _, err := wr.writer.Write(data); err != nil {
+		return err
+	}
+
+	if err := wr.writer.WriteByte('\n'); err != nil {
+		return err
+	}
+
+	return wr.writer.Flush()
 }
