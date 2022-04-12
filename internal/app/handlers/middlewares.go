@@ -20,6 +20,7 @@ type contextKey int
 
 const (
 	contextKeyRequestID contextKey = iota
+	cookieDuration                 = 365 * 24 * time.Hour
 )
 
 func (w gzipWriter) Write(b []byte) (int, error) {
@@ -107,7 +108,7 @@ func MiddlewareAuthUserHandle(next http.Handler) http.Handler {
 			return
 		}
 
-		expiration := time.Now().Add(365 * 24 * time.Hour)
+		expiration := time.Now().Add(cookieDuration)
 		cookie := http.Cookie{
 			Name:    "user_id",
 			Value:   userIDToken,
