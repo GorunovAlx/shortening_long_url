@@ -66,6 +66,10 @@ func (ms *mockStorage) CreateListShortURL(links []storage.ShortURLByUser) ([]sto
 	return nil, nil
 }
 
+func (ms *mockStorage) DeleteShortURLUser(link string, id uint32) error {
+	return nil
+}
+
 // Test request execution.
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) *http.Response {
 	req, err := http.NewRequest(method, ts.URL+path, body)

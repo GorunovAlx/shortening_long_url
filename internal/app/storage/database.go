@@ -227,6 +227,35 @@ func (dbs *DBStorage) WriteListShortURL(links []ShortURLByUser) error {
 	return tx.Commit(context.Background())
 }
 
+func (dbs *DBStorage) DeleteShortURLByUser(link string, id uint32) error {
+	conn, e := dbs.Postgres.Acquire(context.Background())
+	if e != nil {
+		return e
+	}
+	defer conn.Release()
+
+	sqlStmt := `
+	update shortened_links set deleted = true 
+	where user_id = $1 and short_link = $2;`
+
+	commandTag, err := conn.Exec(
+		context.Background(),
+		sqlStmt,
+		id,
+		link,
+	)
+
+	if err != nil {
+		return err
+	}
+	if commandTag.RowsAffected() != 1 {
+		err = utils.NewInsertUniqueLinkError(link)
+		return err
+	}
+
+	return nil
+}
+
 func (dbs *DBStorage) CreateTable() error {
 	conn, e := dbs.Postgres.Acquire(context.Background())
 	if e != nil {
@@ -237,7 +266,7 @@ func (dbs *DBStorage) CreateTable() error {
 	sqlCreateStmt := `
 	create table if not exists public.shortened_links ( id bigserial constraint shortened_link_pk primary key,
 	initial_link varchar(256) not null unique, short_link varchar(256) not null, user_id bigint,
-	date_of_create date ); alter table public.shortened_links owner to postgres;`
+	date_of_create date, deleted boolean ); alter table public.shortened_links owner to postgres;`
 
 	_, err := conn.Exec(context.Background(), sqlCreateStmt)
 	if err != nil {

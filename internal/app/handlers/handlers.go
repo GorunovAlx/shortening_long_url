@@ -43,6 +43,7 @@ func NewRouter(repo storage.ShortURLRepo) *chi.Mux {
 	r.Post("/", CreateShortURLHandler(repo))
 	r.Post("/api/shorten", CreateShortURLJSONHandler(repo))
 	r.Post("/api/shorten/batch", CreateListShortURLHandler(repo))
+	r.Delete("/api/user/urls", DeleteListURLHandler(repo))
 
 	return r
 }
@@ -239,5 +240,53 @@ func CreateListShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 		w.Header().Set("Content-type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		w.Write(resp)
+	}
+}
+
+type Job struct {
+	shortURL string
+}
+
+func DeleteListURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var links []string
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = json.Unmarshal(body, &links)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		token := getCookieByName("user_id", r)
+		if token == "" {
+			token = r.Context().Value(contextKeyRequestID).(string)
+		}
+		id, err := gen.GetUserID(token)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		workersCount := 3
+
+		jobCh := make(chan *Job)
+		for i := 0; i < workersCount; i++ {
+			go func() {
+				for job := range jobCh {
+					urlStorage.DeleteShortURLUser(job.shortURL, id)
+				}
+			}()
+		}
+
+		for i := 0; i < len(links); i++ {
+			job := &Job{shortURL: links[i]}
+			jobCh <- job
+		}
+
+		w.WriteHeader(http.StatusAccepted)
 	}
 }

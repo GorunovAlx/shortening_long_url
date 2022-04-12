@@ -67,3 +67,7 @@ func (m *InMemoryStorage) WriteListShortURL(links []ShortURLByUser) error {
 
 	return nil
 }
+
+func (m *InMemoryStorage) DeleteShortURLByUser(link string, id uint32) error {
+	return nil
+}
