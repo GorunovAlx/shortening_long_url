@@ -236,6 +236,7 @@ func CreateListShortURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		resp, err := json.Marshal(res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

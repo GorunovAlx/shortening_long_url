@@ -171,6 +171,11 @@ func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]Short
 		return nil, err
 	}
 
+	for i, link := range shortenedLinks {
+		shortenedURL := configs.Cfg.BaseURL + "/" + link.ShortLink
+		shortenedLinks[i].setShortLink(shortenedURL)
+	}
+
 	return shortenedLinks, nil
 }
 
