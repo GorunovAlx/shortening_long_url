@@ -104,7 +104,6 @@ func (dbs *DBStorage) GetInitialLink(shortLink string) (string, error) {
 	}
 	defer conn.Release()
 
-	//shortLink = configs.Cfg.BaseURL + "/" + shortLink
 	var iLink string
 	var deleted bool
 	err := conn.QueryRow(
@@ -231,6 +230,48 @@ func (dbs *DBStorage) WriteListShortURL(links []ShortURLByUser) error {
 	}
 
 	return tx.Commit(context.Background())
+}
+
+func (dbs *DBStorage) CheckURLsCreatedByUser(links []string, id uint32) ([]string, error) {
+	conn, e := dbs.Postgres.Acquire(context.Background())
+	if e != nil {
+		return nil, e
+	}
+	defer conn.Release()
+
+	var result []string
+
+	selectStatement := `with temp as (
+		select short_link 
+		from public.shortened_links
+		where user_id = $1)
+		
+		select links.short_link from
+		(select unnest(ARRAY[$2::varchar[]]) short_link) links
+		except
+		select short_link
+		from temp`
+	rows, err := conn.Query(context.Background(), selectStatement, id, links)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var s string
+		err = rows.Scan(&s)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, s)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return result, nil
 }
 
 func (dbs *DBStorage) DeleteShortURLByUser(link string, id uint32) error {

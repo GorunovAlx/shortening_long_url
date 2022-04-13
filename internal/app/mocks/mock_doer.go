@@ -34,6 +34,21 @@ func (m *MockShortURLRepo) EXPECT() *MockShortURLRepoMockRecorder {
 	return m.recorder
 }
 
+// CheckURLsCreatedByUser mocks base method.
+func (m *MockShortURLRepo) CheckURLsCreatedByUser(links []string, id uint32) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckURLsCreatedByUser", links, id)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckURLsCreatedByUser indicates an expected call of CheckURLsCreatedByUser.
+func (mr *MockShortURLRepoMockRecorder) CheckURLsCreatedByUser(links, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckURLsCreatedByUser", reflect.TypeOf((*MockShortURLRepo)(nil).CheckURLsCreatedByUser), links, id)
+}
+
 // CreateListShortURL mocks base method.
 func (m *MockShortURLRepo) CreateListShortURL(links []storage.ShortURLByUser) ([]storage.ShortURLByUser, error) {
 	m.ctrl.T.Helper()
@@ -143,6 +158,21 @@ func NewMockStorageOperations(ctrl *gomock.Controller) *MockStorageOperations {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockStorageOperations) EXPECT() *MockStorageOperationsMockRecorder {
 	return m.recorder
+}
+
+// CheckURLsCreatedByUser mocks base method.
+func (m *MockStorageOperations) CheckURLsCreatedByUser(links []string, id uint32) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckURLsCreatedByUser", links, id)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckURLsCreatedByUser indicates an expected call of CheckURLsCreatedByUser.
+func (mr *MockStorageOperationsMockRecorder) CheckURLsCreatedByUser(links, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckURLsCreatedByUser", reflect.TypeOf((*MockStorageOperations)(nil).CheckURLsCreatedByUser), links, id)
 }
 
 // DeleteShortURLByUser mocks base method.

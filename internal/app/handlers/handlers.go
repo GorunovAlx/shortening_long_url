@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 
 	"io"
@@ -274,6 +275,17 @@ func DeleteListURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		id, err := gen.GetUserID(token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		res, err := urlStorage.CheckURLsCreatedByUser(links, id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if len(res) != 0 {
+			noRightsError := fmt.Errorf("you cannot delete this links: %v. you have not rights", res)
+			http.Error(w, noRightsError.Error(), http.StatusMethodNotAllowed)
 			return
 		}
 

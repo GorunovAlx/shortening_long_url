@@ -33,8 +33,8 @@ type ShortURLRepo interface {
 	CreateListShortURL(links []ShortURLByUser) ([]ShortURLByUser, error)
 	GetAllShortURLUser(id uint32) ([]ShortURLByUser, error)
 	PingDB() error
-	//DeleteListURLUser(link string) error
 	DeleteShortURLUser(link string, id uint32) error
+	CheckURLsCreatedByUser(links []string, id uint32) ([]string, error)
 }
 
 // RWShortURL contains:
@@ -47,6 +47,7 @@ type StorageOperations interface {
 	GetAllShortURLByUser(userID uint32) ([]ShortURLByUser, error)
 	PingDB() error
 	DeleteShortURLByUser(link string, id uint32) error
+	CheckURLsCreatedByUser(links []string, id uint32) ([]string, error)
 }
 
 // The ShortURLStorage contains storage that implements
@@ -152,7 +153,6 @@ func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]Short
 		if err != nil {
 			return nil, err
 		}
-		//shortenedURL = configs.Cfg.BaseURL + "/" + shortenedURL
 
 		links[i].setShortLink(shortenedURL)
 	}
@@ -184,8 +184,17 @@ func (s *ShortURLByUser) setShortLink(value string) {
 }
 
 func (repo *ShortURLStorage) DeleteShortURLUser(link string, id uint32) error {
-
 	repo.storage.DeleteShortURLByUser(link, id)
 
 	return nil
+}
+
+func (repo *ShortURLStorage) CheckURLsCreatedByUser(links []string, id uint32) ([]string, error) {
+	res, err := repo.storage.CheckURLsCreatedByUser(links, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
