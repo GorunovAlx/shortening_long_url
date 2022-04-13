@@ -152,7 +152,7 @@ func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]Short
 		if err != nil {
 			return nil, err
 		}
-		shortenedURL = configs.Cfg.BaseURL + "/" + shortenedURL
+		//shortenedURL = configs.Cfg.BaseURL + "/" + shortenedURL
 
 		links[i].setShortLink(shortenedURL)
 	}
