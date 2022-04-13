@@ -285,7 +285,7 @@ func (dbs *DBStorage) DeleteShortURLByUser(link string, id uint32) error {
 	update shortened_links set deleted = true 
 	where user_id = $1 and short_link = $2;`
 
-	commandTag, err := conn.Exec(
+	_, err := conn.Exec(
 		context.Background(),
 		sqlStmt,
 		id,
@@ -293,10 +293,6 @@ func (dbs *DBStorage) DeleteShortURLByUser(link string, id uint32) error {
 	)
 
 	if err != nil {
-		return err
-	}
-	if commandTag.RowsAffected() != 1 {
-		err = utils.NewInsertUniqueLinkError(link)
 		return err
 	}
 

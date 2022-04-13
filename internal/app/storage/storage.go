@@ -184,7 +184,10 @@ func (s *ShortURLByUser) setShortLink(value string) {
 }
 
 func (repo *ShortURLStorage) DeleteShortURLUser(link string, id uint32) error {
-	repo.storage.DeleteShortURLByUser(link, id)
+	err := repo.storage.DeleteShortURLByUser(link, id)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
