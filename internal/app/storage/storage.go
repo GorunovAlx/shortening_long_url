@@ -88,7 +88,9 @@ func (repo *ShortURLStorage) GetInitialLink(shortLink string) (string, error) {
 	defer repo.s.RUnlock()
 
 	url, err := repo.storage.GetInitialLink(shortLink)
-	if err != nil {
+	if errors.Is(err, utils.ErrDeletedLink) {
+		return "", utils.ErrDeletedLink
+	} else if err != nil {
 		return "", err
 	}
 

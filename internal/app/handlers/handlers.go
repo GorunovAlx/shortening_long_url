@@ -154,8 +154,13 @@ func GetInitialLinkHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 		}
 
 		link, err := urlStorage.GetInitialLink(shortURL)
-		if err != nil {
+		if err != nil && err != utils.ErrDeletedLink {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if errors.Is(err, utils.ErrDeletedLink) {
+			w.WriteHeader(http.StatusGone)
 			return
 		}
 
