@@ -104,12 +104,12 @@ func (dbs *DBStorage) GetInitialLink(shortLink string) (string, error) {
 	}
 	defer conn.Release()
 
-	shortLink = configs.Cfg.BaseURL + "/" + shortLink
+	//shortLink = configs.Cfg.BaseURL + "/" + shortLink
 	var iLink string
 	var deleted bool
 	err := conn.QueryRow(
 		context.Background(),
-		"select initial_link, deleted from shortened_links where short_link=$1",
+		"select initial_link, COALESCE(deleted, false) from shortened_links where short_link=$1",
 		shortLink,
 	).Scan(&iLink, &deleted)
 	if err != nil {
