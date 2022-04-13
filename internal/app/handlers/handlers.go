@@ -6,12 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"context"
 	"io"
 	"net/http"
 	"time"
-
-	"golang.org/x/sync/errgroup"
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/go-chi/chi/v5"
@@ -294,30 +291,18 @@ func DeleteListURLHandler(urlStorage storage.ShortURLRepo) http.HandlerFunc {
 
 		workersCount := 3
 
-		g, _ := errgroup.WithContext(context.Background())
-
 		jobCh := make(chan *Job)
 		for i := 0; i < workersCount; i++ {
-			g.Go(func() error {
+			go func() {
 				for job := range jobCh {
-					err := urlStorage.DeleteShortURLUser(job.shortURL, id)
-					if err != nil {
-						return fmt.Errorf("deleting url failed: %w", err)
-					}
+					urlStorage.DeleteShortURLUser(job.shortURL, id)
 				}
-
-				return nil
-			})
+			}()
 		}
 
 		for i := 0; i < len(links); i++ {
 			job := &Job{shortURL: links[i]}
 			jobCh <- job
-		}
-
-		if err := g.Wait(); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 
 		w.WriteHeader(http.StatusAccepted)
