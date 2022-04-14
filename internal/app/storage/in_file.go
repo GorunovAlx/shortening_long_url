@@ -177,3 +177,11 @@ func (f *FileStorage) WriteListShortURL(links []ShortURLByUser) error {
 
 	return wr.writer.Flush()
 }
+
+func (f *FileStorage) DeleteShortURLByUser(link string, id uint32) error {
+	return nil
+}
+
+func (f *FileStorage) CheckURLsCreatedByUser(links []string, id uint32) ([]string, error) {
+	return nil, nil
+}

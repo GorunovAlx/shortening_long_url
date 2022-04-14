@@ -104,14 +104,19 @@ func (dbs *DBStorage) GetInitialLink(shortLink string) (string, error) {
 	}
 	defer conn.Release()
 
-	shortLink = configs.Cfg.BaseURL + "/" + shortLink
 	var iLink string
+	var deleted bool
 	err := conn.QueryRow(
 		context.Background(),
-		"select initial_link from shortened_links where short_link=$1",
+		"select initial_link, COALESCE(deleted, false) from shortened_links where short_link=$1",
 		shortLink,
-	).Scan(&iLink)
+	).Scan(&iLink, &deleted)
 	if err != nil {
+		return "", err
+	}
+
+	if deleted {
+		err = utils.NewDeletedLinkError(shortLink)
 		return "", err
 	}
 
@@ -227,6 +232,73 @@ func (dbs *DBStorage) WriteListShortURL(links []ShortURLByUser) error {
 	return tx.Commit(context.Background())
 }
 
+func (dbs *DBStorage) CheckURLsCreatedByUser(links []string, id uint32) ([]string, error) {
+	conn, e := dbs.Postgres.Acquire(context.Background())
+	if e != nil {
+		return nil, e
+	}
+	defer conn.Release()
+
+	var result []string
+
+	selectStatement := `with temp as (
+		select short_link 
+		from public.shortened_links
+		where user_id = $1)
+		
+		select links.short_link from
+		(select unnest(ARRAY[$2::varchar[]]) short_link) links
+		except
+		select short_link
+		from temp`
+	rows, err := conn.Query(context.Background(), selectStatement, id, links)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var s string
+		err = rows.Scan(&s)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, s)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return result, nil
+}
+
+func (dbs *DBStorage) DeleteShortURLByUser(link string, id uint32) error {
+	conn, e := dbs.Postgres.Acquire(context.Background())
+	if e != nil {
+		return e
+	}
+	defer conn.Release()
+
+	sqlStmt := `
+	update shortened_links set deleted = true 
+	where user_id = $1 and short_link = $2;`
+
+	_, err := conn.Exec(
+		context.Background(),
+		sqlStmt,
+		id,
+		link,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (dbs *DBStorage) CreateTable() error {
 	conn, e := dbs.Postgres.Acquire(context.Background())
 	if e != nil {
@@ -237,7 +309,7 @@ func (dbs *DBStorage) CreateTable() error {
 	sqlCreateStmt := `
 	create table if not exists public.shortened_links ( id bigserial constraint shortened_link_pk primary key,
 	initial_link varchar(256) not null unique, short_link varchar(256) not null, user_id bigint,
-	date_of_create date ); alter table public.shortened_links owner to postgres;`
+	date_of_create date, deleted boolean ); alter table public.shortened_links owner to postgres;`
 
 	_, err := conn.Exec(context.Background(), sqlCreateStmt)
 	if err != nil {

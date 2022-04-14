@@ -33,6 +33,8 @@ type ShortURLRepo interface {
 	CreateListShortURL(links []ShortURLByUser) ([]ShortURLByUser, error)
 	GetAllShortURLUser(id uint32) ([]ShortURLByUser, error)
 	PingDB() error
+	DeleteShortURLUser(link string, id uint32) error
+	CheckURLsCreatedByUser(links []string, id uint32) ([]string, error)
 }
 
 // RWShortURL contains:
@@ -44,6 +46,8 @@ type StorageOperations interface {
 	WriteListShortURL(links []ShortURLByUser) error
 	GetAllShortURLByUser(userID uint32) ([]ShortURLByUser, error)
 	PingDB() error
+	DeleteShortURLByUser(link string, id uint32) error
+	CheckURLsCreatedByUser(links []string, id uint32) ([]string, error)
 }
 
 // The ShortURLStorage contains storage that implements
@@ -85,7 +89,9 @@ func (repo *ShortURLStorage) GetInitialLink(shortLink string) (string, error) {
 	defer repo.s.RUnlock()
 
 	url, err := repo.storage.GetInitialLink(shortLink)
-	if err != nil {
+	if errors.Is(err, utils.ErrDeletedLink) {
+		return "", utils.ErrDeletedLink
+	} else if err != nil {
 		return "", err
 	}
 
@@ -147,7 +153,6 @@ func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]Short
 		if err != nil {
 			return nil, err
 		}
-		shortenedURL = configs.Cfg.BaseURL + "/" + shortenedURL
 
 		links[i].setShortLink(shortenedURL)
 	}
@@ -166,9 +171,33 @@ func (repo *ShortURLStorage) CreateListShortURL(links []ShortURLByUser) ([]Short
 		return nil, err
 	}
 
+	for i, link := range shortenedLinks {
+		shortenedURL := configs.Cfg.BaseURL + "/" + link.ShortLink
+		shortenedLinks[i].setShortLink(shortenedURL)
+	}
+
 	return shortenedLinks, nil
 }
 
 func (s *ShortURLByUser) setShortLink(value string) {
 	(*s).ShortLink = value
+}
+
+func (repo *ShortURLStorage) DeleteShortURLUser(link string, id uint32) error {
+	err := repo.storage.DeleteShortURLByUser(link, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repo *ShortURLStorage) CheckURLsCreatedByUser(links []string, id uint32) ([]string, error) {
+	res, err := repo.storage.CheckURLsCreatedByUser(links, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
